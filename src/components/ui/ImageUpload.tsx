@@ -81,7 +81,6 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
           type="file"
           accept="image/*"
           multiple
-          capture="environment"
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
