@@ -259,14 +259,14 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       />
 
       <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <div className="relative">
+        <label className="flex items-center gap-5 cursor-pointer">
+          <div className="relative shrink-0 h-5 w-9">
             <input type="checkbox" className="sr-only peer" {...register('is_someday')} />
             <div className="h-5 w-9 rounded-full bg-cream-200 peer-checked:bg-sand-500 transition-colors" />
             <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow
               transition-transform peer-checked:translate-x-4" />
           </div>
-          <span className="text-sm text-warm-700">Someday — no specific date</span>
+          <span className="text-sm text-warm-700 leading-snug">Someday — no specific date</span>
         </label>
 
         {!isSomeday && (
