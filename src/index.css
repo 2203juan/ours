@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+    --sar: env(safe-area-inset-right);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream-50 text-warm-800 font-sans antialiased;
+    overscroll-behavior: none;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Utilities ────────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* iPhone safe area helpers */
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pb-safe-20 {
+    padding-bottom: max(80px, calc(80px + env(safe-area-inset-bottom, 0px)));
+  }
+
+  /* Hide scrollbar while keeping scroll */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Clamp lines */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* ── Scrollbar styling (non-mobile) ───────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D9CFC4;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9C8C7E;
+  }
+}
+
+/* ── Custom checkbox toggle ───────────────────────────────────────────────── */
+
+input[type="checkbox"].sr-only:checked + div {
+  background-color: #A8865A;
+}
+
+input[type="checkbox"].sr-only:checked ~ div {
+  transform: translateX(1rem);
+}
+
+/* ── Peer-checked transitions for the toggle ─────────────────────────────── */
+/* Handled by Tailwind peer utilities – nothing extra needed */
