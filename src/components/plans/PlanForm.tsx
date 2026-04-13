@@ -3,14 +3,14 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
-import { normalizeSocialUrl } from '../../lib/utils'
+import { normalizeSocialUrl, cn } from '../../lib/utils'
 import type { Plan, Category, PlanPriority, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
@@ -52,6 +52,21 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [newCatEmoji, setNewCatEmoji] = useState('✨')
+
+  // Auto-expand details when editing a plan that has detail fields filled
+  const [showDetails, setShowDetails] = useState(() => {
+    if (!plan) return false
+    return !!(
+      plan.description ||
+      plan.budget_estimate != null ||
+      plan.location_text ||
+      plan.instagram_ref ||
+      plan.tiktok_url ||
+      plan.images.length > 0 ||
+      plan.priority !== 'normal' ||
+      !plan.is_someday
+    )
+  })
 
   const {
     register,
@@ -137,6 +152,8 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 px-5 pb-8">
+
+      {/* ── Quick fields ── */}
       <Input
         label="Plan name *"
         placeholder="e.g. Sunset dinner at the harbor"
@@ -202,36 +219,6 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         )}
       </div>
 
-      <Textarea
-        label="Description"
-        placeholder="Any details, ideas, or notes…"
-        {...register('description')}
-        error={errors.description?.message}
-      />
-
-      <Select label="Priority" {...register('priority')}>
-        <option value="low">↓ Low</option>
-        <option value="normal">Normal</option>
-        <option value="high">↑ High</option>
-      </Select>
-
-      <Input
-        label="Estimated budget"
-        type="number"
-        placeholder="e.g. 50"
-        min={0}
-        step={1}
-        {...register('budget_estimate')}
-        error={errors.budget_estimate?.message}
-      />
-
-      <Input
-        label="Zone/Neighborhood"
-        placeholder="e.g. Lisbon, Portugal"
-        {...register('location_text')}
-        error={errors.location_text?.message}
-      />
-
       <Input
         label="Google Maps link"
         placeholder="https://maps.google.com/…"
@@ -241,49 +228,111 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         error={errors.maps_url?.message}
       />
 
-      <Input
-        label="Instagram"
-        placeholder="@username or instagram.com/…"
-        inputMode="url"
-        {...register('instagram_ref')}
-        error={errors.instagram_ref?.message}
-      />
-
-      <Input
-        label="TikTok"
-        placeholder="@username or tiktok.com/…"
-        inputMode="url"
-        {...register('tiktok_url')}
-        error={errors.tiktok_url?.message}
-      />
-
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-5 cursor-pointer">
-          <div className="relative shrink-0 h-5 w-9">
-            <input type="checkbox" className="sr-only peer" {...register('is_someday')} />
-            <div className="h-5 w-9 rounded-full bg-cream-200 peer-checked:bg-sand-500 transition-colors" />
-            <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow
-              transition-transform peer-checked:translate-x-4" />
-          </div>
-          <span className="text-sm text-warm-700 leading-snug">Someday — no specific date</span>
-        </label>
-
-        {!isSomeday && (
-          <Input
-            label="Ideal date"
-            type="date"
-            {...register('ideal_date')}
-            error={errors.ideal_date?.message}
+      {/* ── Details toggle ── */}
+      <button
+        type="button"
+        onClick={() => setShowDetails((v) => !v)}
+        className="flex items-center gap-3 -my-1 group"
+      >
+        <div className="flex-1 h-px bg-cream-200" />
+        <span className="flex items-center gap-1 text-xs text-warm-400
+          group-hover:text-warm-600 transition-colors shrink-0">
+          {showDetails ? 'Less details' : 'Add more details'}
+          <ChevronDown
+            size={13}
+            className={cn('transition-transform duration-300', showDetails && 'rotate-180')}
           />
-        )}
-      </div>
+        </span>
+        <div className="flex-1 h-px bg-cream-200" />
+      </button>
 
-      <PlanImageUpload
-        coupleId={session.coupleId}
-        planId={plan?.id}
-        value={images}
-        onChange={setImages}
-      />
+      {/* ── Collapsible details ── */}
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-300 ease-in-out -mt-1',
+          showDetails ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex flex-col gap-5 pb-1">
+
+            <Textarea
+              label="Description"
+              placeholder="Any details, ideas, or notes…"
+              {...register('description')}
+              error={errors.description?.message}
+            />
+
+            <Input
+              label="Estimated budget"
+              type="number"
+              placeholder="e.g. 50"
+              min={0}
+              step={1}
+              {...register('budget_estimate')}
+              error={errors.budget_estimate?.message}
+            />
+
+            <Input
+              label="Zone/Neighborhood"
+              placeholder="e.g. Lisbon, Portugal"
+              {...register('location_text')}
+              error={errors.location_text?.message}
+            />
+
+            <Input
+              label="Instagram"
+              placeholder="@username or instagram.com/…"
+              inputMode="url"
+              {...register('instagram_ref')}
+              error={errors.instagram_ref?.message}
+            />
+
+            <Input
+              label="TikTok"
+              placeholder="@username or tiktok.com/…"
+              inputMode="url"
+              {...register('tiktok_url')}
+              error={errors.tiktok_url?.message}
+            />
+
+            <PlanImageUpload
+              coupleId={session.coupleId}
+              planId={plan?.id}
+              value={images}
+              onChange={setImages}
+            />
+
+            <Select label="Priority" {...register('priority')}>
+              <option value="low">↓ Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">↑ High</option>
+            </Select>
+
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-5 cursor-pointer">
+                <div className="relative shrink-0 h-5 w-9">
+                  <input type="checkbox" className="sr-only peer" {...register('is_someday')} />
+                  <div className="h-5 w-9 rounded-full bg-cream-200 peer-checked:bg-sand-500 transition-colors" />
+                  <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow
+                    transition-transform peer-checked:translate-x-4" />
+                </div>
+                <span className="text-sm text-warm-700 leading-snug">Someday — no specific date</span>
+              </label>
+
+              {!isSomeday && (
+                <Input
+                  label="Ideal date"
+                  type="date"
+                  {...register('ideal_date')}
+                  error={errors.ideal_date?.message}
+                />
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
 
       <Button
         type="submit"
