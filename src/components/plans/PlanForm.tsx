@@ -138,7 +138,6 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         placeholder="e.g. Sunset dinner at the harbor"
         error={errors.name?.message}
         {...register('name')}
-        autoFocus={!isEditing}
       />
 
       {/* Category */}

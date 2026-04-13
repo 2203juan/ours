@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 import { X } from 'lucide-react'
 
@@ -16,10 +16,16 @@ interface SheetProps {
  * Slides up from the bottom with a smooth animation.
  */
 export function Sheet({ open, onClose, title, children, height = 'auto' }: SheetProps) {
-  // Prevent body scroll when open
+  const scrollRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
+      // Reset the sheet's internal scroll to the top on every open.
+      // iOS WebKit may retain the previous scroll position when the component
+      // re-mounts, so we force it here after the DOM is ready.
+      const el = scrollRef.current
+      if (el) el.scrollTop = 0
     } else {
       document.body.style.overflow = ''
     }
@@ -73,7 +79,7 @@ export function Sheet({ open, onClose, title, children, height = 'auto' }: Sheet
         )}
 
         {/* Scrollable content */}
-        <div className="overflow-y-auto overscroll-contain flex-1 pb-safe">
+        <div ref={scrollRef} className="overflow-y-auto overscroll-contain flex-1 pb-safe">
           {children}
         </div>
       </div>
