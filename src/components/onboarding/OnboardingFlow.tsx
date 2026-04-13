@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Heart, ArrowRight, Copy, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { generateCoupleCode } from '../../lib/utils'
 import { DEFAULT_CATEGORIES, type AvatarKey } from '../../types'
@@ -24,6 +25,7 @@ type Step =
 
 export function OnboardingFlow() {
   const { setSession } = useSessionStore()
+  const navigate = useNavigate()
   const [step, setStep] = useState<Step>('welcome')
   const [loading, setLoading] = useState(false)
 
@@ -94,6 +96,7 @@ export function OnboardingFlow() {
     const session: Session = { ...createdCouple, partnerKey: key }
     setCreatedCouple(session)
     setSession(session)      // ← saves to store, but we still show code screen
+    navigate('/', { replace: true })
     setStep('create-show-code')
   }
 
@@ -142,6 +145,7 @@ export function OnboardingFlow() {
   const handleJoinPickIdentity = (key: 'one' | 'two') => {
     if (!joinSession) return
     setSession({ ...joinSession, partnerKey: key })
+    navigate('/', { replace: true })
   }
 
   // ─────────────────────────────────────────────────────────────────────────

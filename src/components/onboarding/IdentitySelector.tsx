@@ -1,4 +1,5 @@
 import { Heart, ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useSessionStore } from '../../stores/sessionStore'
 import { AvatarIcon } from '../ui/AvatarIcon'
 import type { PartnerKey } from '../../types'
@@ -10,10 +11,14 @@ import type { PartnerKey } from '../../types'
  */
 export function IdentitySelector() {
   const { session, setPartnerKey } = useSessionStore()
+  const navigate = useNavigate()
 
   if (!session) return null
 
-  const pick = (key: PartnerKey) => setPartnerKey(key)
+  const pick = (key: PartnerKey) => {
+    setPartnerKey(key)
+    navigate('/', { replace: true })
+  }
 
   return (
     <div className="min-h-dvh bg-cream-50 flex flex-col items-center justify-center px-6 py-12">
