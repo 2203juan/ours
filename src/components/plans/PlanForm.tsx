@@ -236,7 +236,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       />
 
       <Input
-        label="Location"
+        label="Zone/Neighborhood"
         placeholder="e.g. Lisbon, Portugal"
         {...register('location_text')}
         error={errors.location_text?.message}
