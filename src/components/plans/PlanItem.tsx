@@ -1,17 +1,21 @@
-import { type Plan } from '../../types'
-import { Avatar } from '../ui/Avatar'
+import type { Plan, Session } from '../../types'
+import { getPartnerName, getPartnerAvatar } from '../../types'
+import { AvatarIcon } from '../ui/AvatarIcon'
 import { StatusDot, PriorityBadge } from '../ui/Badge'
 import { cn, truncate, formatBudget, formatDate } from '../../lib/utils'
 import { MapPin, CalendarDays, DollarSign } from 'lucide-react'
+import { isValidProposer } from '../../hooks/usePlans'
 
 interface PlanItemProps {
   plan: Plan
+  session: Session
   onClick: (plan: Plan) => void
-  isMe: (profileId: string | null) => boolean
 }
 
-export function PlanItem({ plan, onClick, isMe }: PlanItemProps) {
+export function PlanItem({ plan, session, onClick }: PlanItemProps) {
   const cancelled = plan.status === 'canceled'
+  const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
+  const isMe = proposerKey === session.partnerKey
 
   return (
     <button
@@ -39,7 +43,6 @@ export function PlanItem({ plan, onClick, isMe }: PlanItemProps) {
           <PriorityBadge priority={plan.priority} />
         </div>
 
-        {/* Meta row */}
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {plan.location_text && (
             <span className="flex items-center gap-0.5 text-[11px] text-warm-400">
@@ -59,7 +62,7 @@ export function PlanItem({ plan, onClick, isMe }: PlanItemProps) {
               {formatBudget(plan.budget_estimate)}
             </span>
           )}
-          {plan.description && (
+          {plan.description && !plan.location_text && (
             <span className="text-[11px] text-warm-300 truncate">
               {truncate(plan.description, 30)}
             </span>
@@ -67,17 +70,12 @@ export function PlanItem({ plan, onClick, isMe }: PlanItemProps) {
         </div>
       </div>
 
-      {/* Proposer avatar */}
-      {plan.proposer && (
-        <div
-          className={cn(
-            'shrink-0',
-            isMe(plan.proposed_by) ? 'opacity-70' : ''
-          )}
-        >
-          <Avatar
-            name={plan.proposer.name}
-            url={plan.proposer.avatar_url}
+      {/* Proposer avatar — subtle opacity if it's me */}
+      {proposerKey && (
+        <div className={cn('shrink-0', isMe ? 'opacity-60' : '')}>
+          <AvatarIcon
+            name={getPartnerName(session, proposerKey)}
+            avatarKey={getPartnerAvatar(session, proposerKey)}
             size="xs"
           />
         </div>

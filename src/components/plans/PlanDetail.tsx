@@ -1,42 +1,46 @@
 import { useState } from 'react'
-import { Edit2, Trash2, MapPin, CalendarDays, DollarSign, Instagram, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Edit2, Trash2, MapPin, CalendarDays, DollarSign,
+  Instagram, ExternalLink, ChevronLeft, ChevronRight,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Plan, PlanStatus } from '../../types'
-import { useUpdatePlan, useDeletePlan } from '../../hooks/usePlans'
-import { Avatar } from '../ui/Avatar'
+import type { Plan, PlanStatus, Category, Session } from '../../types'
+import { getPartnerName, getPartnerAvatar } from '../../types'
+import { useUpdatePlan, useDeletePlan, isValidProposer } from '../../hooks/usePlans'
+import { AvatarIcon } from '../ui/AvatarIcon'
 import { StatusBadge, PriorityBadge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Sheet } from '../ui/Sheet'
 import { PlanForm } from './PlanForm'
-import type { Category } from '../../types'
 import { formatBudget, formatDate } from '../../lib/utils'
 
 interface PlanDetailProps {
   plan: Plan
   categories: Category[]
-  coupleId: string
-  profileId: string
+  session: Session
   onClose: () => void
 }
 
 const STATUS_ACTIONS: Array<{ status: PlanStatus; label: string; style: string }> = [
-  { status: 'pending', label: 'Mark Pending', style: 'bg-cream-100 text-warm-600 border border-cream-300' },
-  { status: 'selected', label: '✓ Select', style: 'bg-sand-100 text-sand-600 border border-sand-300' },
-  { status: 'completed', label: '✓ Done', style: 'bg-sage-300/40 text-sage-600 border border-sage-300' },
-  { status: 'canceled', label: '× Cancel', style: 'bg-red-50 text-red-500 border border-red-200' },
+  { status: 'pending',   label: 'Mark Pending',  style: 'bg-cream-100 text-warm-600 border border-cream-300' },
+  { status: 'selected',  label: '✓ Select',      style: 'bg-sand-100 text-sand-600 border border-sand-300' },
+  { status: 'completed', label: '✓ Done',         style: 'bg-sage-300/40 text-sage-600 border border-sage-300' },
+  { status: 'canceled',  label: '× Cancel',       style: 'bg-red-50 text-red-500 border border-red-200' },
 ]
 
-export function PlanDetail({ plan, categories, coupleId, profileId, onClose }: PlanDetailProps) {
+export function PlanDetail({ plan, categories, session, onClose }: PlanDetailProps) {
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
 
+  const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
+
   const handleStatusChange = async (status: PlanStatus) => {
     if (status === plan.status) return
     try {
-      await updatePlan.mutateAsync({ id: plan.id, coupleId, payload: { status } })
+      await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload: { status } })
       toast.success(status === 'completed' ? '🎉 Marked as done!' : 'Status updated')
     } catch {
       toast.error('Could not update status.')
@@ -57,14 +61,10 @@ export function PlanDetail({ plan, categories, coupleId, profileId, onClose }: P
     return (
       <Sheet open onClose={() => setEditing(false)} title="Edit plan" height="full">
         <PlanForm
-          coupleId={coupleId}
-          profileId={profileId}
+          session={session}
           categories={categories}
           plan={plan}
-          onDone={() => {
-            setEditing(false)
-            onClose()
-          }}
+          onDone={() => { setEditing(false); onClose() }}
         />
       </Sheet>
     )
@@ -84,14 +84,16 @@ export function PlanDetail({ plan, categories, coupleId, profileId, onClose }: P
             <>
               <button
                 onClick={() => setImgIdx((i) => Math.max(0, i - 1))}
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/70 flex items-center justify-center"
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full
+                  bg-white/70 flex items-center justify-center"
                 disabled={imgIdx === 0}
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 onClick={() => setImgIdx((i) => Math.min(plan.images.length - 1, i + 1))}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/70 flex items-center justify-center"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full
+                  bg-white/70 flex items-center justify-center"
                 disabled={imgIdx === plan.images.length - 1}
               >
                 <ChevronRight size={16} />
@@ -110,20 +112,22 @@ export function PlanDetail({ plan, categories, coupleId, profileId, onClose }: P
       )}
 
       <div className="px-5 pt-4 flex flex-col gap-4">
-        {/* Title + meta */}
+        {/* Title + actions */}
         <div>
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-serif text-2xl text-warm-800 leading-snug flex-1">{plan.name}</h2>
             <div className="flex gap-2 shrink-0 mt-1">
               <button
                 onClick={() => setEditing(true)}
-                className="h-8 w-8 rounded-full bg-cream-100 flex items-center justify-center text-warm-500 hover:bg-cream-200 transition-colors"
+                className="h-8 w-8 rounded-full bg-cream-100 flex items-center justify-center
+                  text-warm-500 hover:bg-cream-200 transition-colors"
               >
                 <Edit2 size={14} />
               </button>
               <button
                 onClick={() => setConfirmDelete((v) => !v)}
-                className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center text-red-400 hover:bg-red-100 transition-colors"
+                className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center
+                  text-red-400 hover:bg-red-100 transition-colors"
               >
                 <Trash2 size={14} />
               </button>
@@ -142,10 +146,17 @@ export function PlanDetail({ plan, categories, coupleId, profileId, onClose }: P
         </div>
 
         {/* Proposer */}
-        {plan.proposer && (
+        {proposerKey && (
           <div className="flex items-center gap-2 text-sm text-warm-500">
-            <Avatar name={plan.proposer.name} url={plan.proposer.avatar_url} size="xs" />
-            <span>Proposed by <strong className="text-warm-700">{plan.proposer.name}</strong></span>
+            <AvatarIcon
+              name={getPartnerName(session, proposerKey)}
+              avatarKey={getPartnerAvatar(session, proposerKey)}
+              size="xs"
+            />
+            <span>
+              Proposed by{' '}
+              <strong className="text-warm-700">{getPartnerName(session, proposerKey)}</strong>
+            </span>
           </div>
         )}
 
@@ -221,19 +232,10 @@ export function PlanDetail({ plan, categories, coupleId, profileId, onClose }: P
             <p className="text-sm text-red-700 font-medium">Delete this plan?</p>
             <p className="text-xs text-red-500">This cannot be undone.</p>
             <div className="flex gap-2">
-              <Button
-                variant="danger"
-                size="sm"
-                loading={deletePlan.isPending}
-                onClick={handleDelete}
-              >
+              <Button variant="danger" size="sm" loading={deletePlan.isPending} onClick={handleDelete}>
                 Delete
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setConfirmDelete(false)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
                 Cancel
               </Button>
             </div>

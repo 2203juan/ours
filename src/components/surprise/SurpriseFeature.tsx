@@ -1,21 +1,21 @@
 import { useState } from 'react'
 import { Shuffle, RefreshCw, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Plan, Category } from '../../types'
-import { pickRandom } from '../../lib/utils'
-import { useUpdatePlan } from '../../hooks/usePlans'
-import { Avatar } from '../ui/Avatar'
+import type { Plan, Category, Session } from '../../types'
+import { getPartnerName, getPartnerAvatar } from '../../types'
+import { pickRandom, cn } from '../../lib/utils'
+import { useUpdatePlan, isValidProposer } from '../../hooks/usePlans'
+import { AvatarIcon } from '../ui/AvatarIcon'
 import { StatusBadge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { cn } from '../../lib/utils'
 
 interface SurpriseFeatureProps {
   plans: Plan[]
   categories: Category[]
-  coupleId: string
+  session: Session
 }
 
-export function SurpriseFeature({ plans, categories, coupleId }: SurpriseFeatureProps) {
+export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureProps) {
   const updatePlan = useUpdatePlan()
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | 'all'>('all')
   const [result, setResult] = useState<Plan | null>(null)
@@ -46,7 +46,7 @@ export function SurpriseFeature({ plans, categories, coupleId }: SurpriseFeature
     try {
       await updatePlan.mutateAsync({
         id: result.id,
-        coupleId,
+        coupleId: session.coupleId,
         payload: { status: 'selected' },
       })
       toast.success('Plan selected! Time to make it happen 🌟')
@@ -143,10 +143,14 @@ export function SurpriseFeature({ plans, categories, coupleId }: SurpriseFeature
               )}
             </div>
 
-            {result.proposer && (
+            {isValidProposer(result.proposed_by) && (
               <div className="flex items-center gap-2 text-sm text-warm-500">
-                <Avatar name={result.proposer.name} url={result.proposer.avatar_url} size="xs" />
-                <span>by {result.proposer.name}</span>
+                <AvatarIcon
+                  name={getPartnerName(session, result.proposed_by)}
+                  avatarKey={getPartnerAvatar(session, result.proposed_by)}
+                  size="xs"
+                />
+                <span>by {getPartnerName(session, result.proposed_by)}</span>
               </div>
             )}
 
@@ -181,17 +185,9 @@ export function SurpriseFeature({ plans, categories, coupleId }: SurpriseFeature
 // ── Category chip ─────────────────────────────────────────────────────────────
 
 function CategoryChip({
-  label,
-  emoji,
-  active,
-  count,
-  onClick,
+  label, emoji, active, count, onClick,
 }: {
-  label: string
-  emoji: string
-  active: boolean
-  count: number
-  onClick: () => void
+  label: string; emoji: string; active: boolean; count: number; onClick: () => void
 }) {
   return (
     <button

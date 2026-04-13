@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useSessionStore } from './stores/sessionStore'
 import { OnboardingFlow } from './components/onboarding/OnboardingFlow'
+import { IdentitySelector } from './components/onboarding/IdentitySelector'
 import { AppShell } from './components/layout/AppShell'
 import { HomePage } from './pages/HomePage'
 import { SurprisePage } from './pages/SurprisePage'
@@ -11,30 +12,32 @@ import { useRealtime } from './hooks/useRealtime'
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 30_000,
-    },
+    queries: { retry: 1, staleTime: 30_000 },
   },
 })
 
 function AppRoutes() {
   const session = useSessionStore((s) => s.session)
 
-  // Real-time subscription while logged in
   useRealtime(session?.coupleId)
 
+  // 1. No couple at all → onboarding
   if (!session) {
     return <OnboardingFlow />
   }
 
+  // 2. Couple known but identity not yet chosen on this device
+  if (session.partnerKey === null) {
+    return <IdentitySelector />
+  }
+
+  // 3. Fully authenticated
   return (
     <AppShell>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/surprise" element={<SurprisePage />} />
         <Route path="/profile" element={<ProfileSettingsPage />} />
-        {/* Fallback */}
         <Route path="*" element={<HomePage />} />
       </Routes>
     </AppShell>

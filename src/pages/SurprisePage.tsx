@@ -17,9 +17,7 @@ export function SurprisePage() {
             <Shuffle size={20} className="text-sand-500" />
             <h1 className="font-serif text-2xl text-warm-800">Surprise us</h1>
           </div>
-          <p className="text-xs text-warm-400 mt-0.5">
-            Let fate decide what to do next
-          </p>
+          <p className="text-xs text-warm-400 mt-0.5">Let fate decide what to do next</p>
         </div>
       </header>
 
@@ -27,7 +25,7 @@ export function SurprisePage() {
         <SurpriseFeature
           plans={plans}
           categories={categories}
-          coupleId={session.coupleId}
+          session={session}
         />
       </div>
     </>

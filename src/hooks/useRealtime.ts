@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 /**
- * Subscribe to real-time changes for a couple's plans and profiles.
+ * Subscribe to real-time changes for a couple's plans and categories.
  * Invalidates the corresponding queries when Supabase pushes an update.
  */
 export function useRealtime(coupleId: string | undefined) {
@@ -24,18 +24,6 @@ export function useRealtime(coupleId: string | undefined) {
         },
         () => {
           qc.invalidateQueries({ queryKey: ['plans', coupleId] })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `couple_id=eq.${coupleId}`,
-        },
-        () => {
-          qc.invalidateQueries({ queryKey: ['profiles', coupleId] })
         }
       )
       .on(

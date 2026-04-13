@@ -1,11 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Session } from '../types'
+import type { Session, PartnerKey } from '../types'
 
 interface SessionState {
   session: Session | null
   setSession: (s: Session) => void
-  updateSession: (partial: Partial<Session>) => void
+  setPartnerKey: (key: PartnerKey) => void
+  updateCoupleName: (name: string) => void
   clearSession: () => void
 }
 
@@ -16,15 +17,21 @@ export const useSessionStore = create<SessionState>()(
 
       setSession: (s) => set({ session: s }),
 
-      updateSession: (partial) =>
+      setPartnerKey: (key) =>
         set((state) => ({
-          session: state.session ? { ...state.session, ...partial } : null,
+          session: state.session ? { ...state.session, partnerKey: key } : null,
+        })),
+
+      updateCoupleName: (name) =>
+        set((state) => ({
+          session: state.session ? { ...state.session, coupleName: name } : null,
         })),
 
       clearSession: () => set({ session: null }),
     }),
     {
-      name: 'ours-session', // localStorage key
+      // v2 key — deliberately different from v1 to invalidate old sessions
+      name: 'ours-session-v2',
     }
   )
 )

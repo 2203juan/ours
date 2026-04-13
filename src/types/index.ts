@@ -1,19 +1,17 @@
 // =====================================================
-// Domain types – mirrors the Supabase schema exactly
+// Domain types – mirrors the Supabase schema (v2)
 // =====================================================
+
+export type PartnerKey = 'one' | 'two'
 
 export interface Couple {
   id: string
   code: string
   couple_name: string | null
-  created_at: string
-}
-
-export interface Profile {
-  id: string
-  couple_id: string
-  name: string
-  avatar_url: string | null
+  partner_one_name: string
+  partner_two_name: string
+  partner_one_avatar: AvatarKey
+  partner_two_avatar: AvatarKey
   created_at: string
 }
 
@@ -33,6 +31,7 @@ export interface Plan {
   id: string
   couple_id: string
   category_id: string | null
+  /** 'one' | 'two' | null  (null for plans migrated from v1) */
   proposed_by: string | null
   name: string
   description: string | null
@@ -47,22 +46,60 @@ export interface Plan {
   images: string[]
   created_at: string
   updated_at: string
-  // joined relations (populated client-side)
+  // joined relation
   category?: Category
-  proposer?: Profile
 }
 
 // =====================================================
-// App session – stored in localStorage
+// Avatar preset system
+// =====================================================
+
+export const AVATAR_PRESETS = [
+  { key: 'blossom', label: 'Blossom', colors: ['#EDD2D6', '#C98A94'] },
+  { key: 'sage',    label: 'Sage',    colors: ['#AABFB2', '#427358'] },
+  { key: 'sand',    label: 'Sand',    colors: ['#D4BB9A', '#8C6D43'] },
+  { key: 'dusk',    label: 'Dusk',    colors: ['#C4B5D5', '#8B6FAE'] },
+  { key: 'sky',     label: 'Sky',     colors: ['#A8C5D8', '#4A7A9B'] },
+  { key: 'ember',   label: 'Ember',   colors: ['#E8C09A', '#C4714A'] },
+] as const
+
+export type AvatarKey = typeof AVATAR_PRESETS[number]['key']
+
+export function getAvatarPreset(key: string) {
+  return AVATAR_PRESETS.find((p) => p.key === key) ?? AVATAR_PRESETS[0]
+}
+
+// =====================================================
+// App session – stored in localStorage (key: ours-session-v2)
 // =====================================================
 
 export interface Session {
   coupleId: string
   coupleCode: string
   coupleName: string
-  profileId: string
-  profileName: string
-  avatarUrl: string | null
+  partnerOneName: string
+  partnerOneAvatar: AvatarKey
+  partnerTwoName: string
+  partnerTwoAvatar: AvatarKey
+  /** Which partner this device has identified as. null = not yet chosen. */
+  partnerKey: PartnerKey | null
+}
+
+/** Derived helpers used throughout the app */
+export function getMyName(session: Session): string {
+  return session.partnerKey === 'one' ? session.partnerOneName : session.partnerTwoName
+}
+
+export function getMyAvatar(session: Session): AvatarKey {
+  return session.partnerKey === 'one' ? session.partnerOneAvatar : session.partnerTwoAvatar
+}
+
+export function getPartnerName(session: Session, key: 'one' | 'two'): string {
+  return key === 'one' ? session.partnerOneName : session.partnerTwoName
+}
+
+export function getPartnerAvatar(session: Session, key: 'one' | 'two'): AvatarKey {
+  return key === 'one' ? session.partnerOneAvatar : session.partnerTwoAvatar
 }
 
 // =====================================================
@@ -72,7 +109,7 @@ export interface Session {
 export interface PlanFilters {
   status: PlanStatus | 'all'
   categoryId: string | 'all'
-  proposedBy: string | 'all'
+  proposedBy: PartnerKey | 'all'
 }
 
 // =====================================================
@@ -82,7 +119,7 @@ export interface PlanFilters {
 export interface CreatePlanPayload {
   couple_id: string
   category_id: string | null
-  proposed_by: string
+  proposed_by: PartnerKey
   name: string
   description?: string | null
   priority: PlanPriority

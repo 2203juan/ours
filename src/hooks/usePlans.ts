@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../lib/supabase'
-import { PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../lib/supabase'
-import type { Plan, PlanFilters, CreatePlanPayload, UpdatePlanPayload } from '../types'
+import { supabase, PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../lib/supabase'
+import type { Plan, PlanFilters, CreatePlanPayload, UpdatePlanPayload, PartnerKey } from '../types'
 
 const QUERY_KEY = 'plans'
 
@@ -10,11 +9,7 @@ const QUERY_KEY = 'plans'
 async function fetchPlans(coupleId: string): Promise<Plan[]> {
   const { data, error } = await supabase
     .from('plans')
-    .select(
-      `*,
-       category:categories(*),
-       proposer:profiles(*)`
-    )
+    .select(`*, category:categories(*)`)
     .eq('couple_id', coupleId)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -37,7 +32,7 @@ export function filterPlans(plans: Plan[], filters: PlanFilters): Plan[] {
   return plans.filter((p) => {
     if (filters.status !== 'all' && p.status !== filters.status) return false
     if (filters.categoryId !== 'all' && p.category_id !== filters.categoryId) return false
-    if (filters.proposedBy !== 'all' && p.proposed_by !== filters.proposedBy) return false
+    if (filters.proposedBy !== 'all' && p.proposed_by !== (filters.proposedBy as string)) return false
     return true
   })
 }
@@ -51,7 +46,7 @@ export function useCreatePlan() {
       const { data, error } = await supabase
         .from('plans')
         .insert(payload)
-        .select(`*, category:categories(*), proposer:profiles(*)`)
+        .select(`*, category:categories(*)`)
         .single()
       if (error) throw error
       return data as Plan
@@ -67,12 +62,20 @@ export function useCreatePlan() {
 export function useUpdatePlan() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, coupleId, payload }: { id: string; coupleId: string; payload: UpdatePlanPayload }) => {
+    mutationFn: async ({
+      id,
+      coupleId,
+      payload,
+    }: {
+      id: string
+      coupleId: string
+      payload: UpdatePlanPayload
+    }) => {
       const { data, error } = await supabase
         .from('plans')
         .update(payload)
         .eq('id', id)
-        .select(`*, category:categories(*), proposer:profiles(*)`)
+        .select(`*, category:categories(*)`)
         .single()
       if (error) throw error
       return { plan: data as Plan, coupleId }
@@ -89,7 +92,6 @@ export function useDeletePlan() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ plan }: { plan: Plan }) => {
-      // Delete associated images from storage (best-effort)
       for (const url of plan.images) {
         await deleteFileByUrl(PLAN_IMAGES_BUCKET, url)
       }
@@ -101,4 +103,11 @@ export function useDeletePlan() {
       qc.invalidateQueries({ queryKey: [QUERY_KEY, coupleId] })
     },
   })
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Returns true if proposed_by is a valid PartnerKey */
+export function isValidProposer(v: string | null): v is PartnerKey {
+  return v === 'one' || v === 'two'
 }

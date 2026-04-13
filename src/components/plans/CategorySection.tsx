@@ -1,23 +1,23 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import type { Plan, Category } from '../../types'
+import type { Plan, Category, Session } from '../../types'
 import { PlanItem } from './PlanItem'
 
 interface CategorySectionProps {
-  category: Category | null // null = "Uncategorized"
+  category: Category | null
   plans: Plan[]
   defaultOpen?: boolean
+  session: Session
   onPlanClick: (plan: Plan) => void
-  isMe: (profileId: string | null) => boolean
 }
 
 export function CategorySection({
   category,
   plans,
   defaultOpen = true,
+  session,
   onPlanClick,
-  isMe,
 }: CategorySectionProps) {
   const [open, setOpen] = useState(defaultOpen)
 
@@ -28,7 +28,6 @@ export function CategorySection({
 
   return (
     <div className="border-b border-cream-200 last:border-b-0">
-      {/* Header */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-cream-50 transition-colors"
@@ -51,15 +50,14 @@ export function CategorySection({
         />
       </button>
 
-      {/* Plans list */}
       {open && (
         <div className="animate-fade-in">
           {plans.map((plan) => (
             <PlanItem
               key={plan.id}
               plan={plan}
+              session={session}
               onClick={onPlanClick}
-              isMe={isMe}
             />
           ))}
         </div>

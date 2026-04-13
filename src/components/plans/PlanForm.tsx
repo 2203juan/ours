@@ -10,7 +10,7 @@ import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
-import type { Plan, Category, PlanPriority, PlanStatus } from '../../types'
+import type { Plan, Category, PlanPriority, PlanStatus, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
 
@@ -33,16 +33,15 @@ type FormValues = z.infer<typeof schema>
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface PlanFormProps {
-  coupleId: string
-  profileId: string
+  session: Session
   categories: Category[]
-  plan?: Plan // if editing
+  plan?: Plan
   onDone: () => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlanForm({ coupleId, profileId, categories, plan, onDone }: PlanFormProps) {
+export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   const isEditing = !!plan
   const createPlan = useCreatePlan()
   const updatePlan = useUpdatePlan()
@@ -96,13 +95,14 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
       }
 
       if (isEditing && plan) {
-        await updatePlan.mutateAsync({ id: plan.id, coupleId, payload })
+        await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload })
         toast.success('Plan updated')
       } else {
         await createPlan.mutateAsync({
           ...payload,
-          couple_id: coupleId,
-          proposed_by: profileId,
+          couple_id: session.coupleId,
+          // Always 'one' or 'two' — never null on new plans
+          proposed_by: session.partnerKey ?? 'one',
         })
         toast.success('Plan added ✨')
       }
@@ -117,7 +117,7 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
     if (!newCatName.trim()) return
     try {
       const cat = await createCategory.mutateAsync({
-        coupleId,
+        coupleId: session.coupleId,
         name: newCatName.trim(),
         emoji: newCatEmoji || '✨',
       })
@@ -133,7 +133,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 px-5 pb-8">
-      {/* Name */}
       <Input
         label="Plan name *"
         placeholder="e.g. Sunset dinner at the harbor"
@@ -144,10 +143,7 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
 
       {/* Category */}
       <div className="flex flex-col gap-1">
-        <Select
-          label="Category"
-          {...register('category_id')}
-        >
+        <Select label="Category" {...register('category_id')}>
           <option value="">— No category —</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -170,28 +166,32 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
               placeholder="emoji"
               value={newCatEmoji}
               onChange={(e) => setNewCatEmoji(e.target.value)}
-              className="w-14 rounded-xl border border-cream-300 px-2 py-2 text-center text-sm focus:outline-none focus:ring-2 focus:ring-sand-400"
+              className="w-14 rounded-xl border border-cream-300 px-2 py-2 text-center text-sm
+                focus:outline-none focus:ring-2 focus:ring-sand-400"
               maxLength={2}
             />
             <input
               placeholder="Category name"
               value={newCatName}
               onChange={(e) => setNewCatName(e.target.value)}
-              className="flex-1 rounded-xl border border-cream-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sand-400"
+              className="flex-1 rounded-xl border border-cream-300 px-3 py-2 text-sm
+                focus:outline-none focus:ring-2 focus:ring-sand-400"
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCategory())}
             />
             <button
               type="button"
               onClick={handleAddCategory}
               disabled={createCategory.isPending}
-              className="px-3 py-2 bg-sand-500 text-white rounded-xl text-sm font-medium hover:bg-sand-600 transition-colors"
+              className="px-3 py-2 bg-sand-500 text-white rounded-xl text-sm font-medium
+                hover:bg-sand-600 transition-colors"
             >
               Add
             </button>
             <button
               type="button"
               onClick={() => setShowNewCategory(false)}
-              className="px-3 py-2 bg-cream-100 text-warm-600 rounded-xl text-sm hover:bg-cream-200 transition-colors"
+              className="px-3 py-2 bg-cream-100 text-warm-600 rounded-xl text-sm
+                hover:bg-cream-200 transition-colors"
             >
               Cancel
             </button>
@@ -199,7 +199,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         )}
       </div>
 
-      {/* Description */}
       <Textarea
         label="Description"
         placeholder="Any details, ideas, or notes…"
@@ -207,7 +206,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         error={errors.description?.message}
       />
 
-      {/* Priority + Status row */}
       <div className="flex gap-3">
         <div className="flex-1">
           <Select label="Priority" {...register('priority')}>
@@ -228,7 +226,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         )}
       </div>
 
-      {/* Budget */}
       <Input
         label="Estimated budget"
         type="number"
@@ -239,7 +236,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         error={errors.budget_estimate?.message}
       />
 
-      {/* Location */}
       <Input
         label="Location"
         placeholder="e.g. Lisbon, Portugal"
@@ -247,7 +243,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         error={errors.location_text?.message}
       />
 
-      {/* Maps URL */}
       <Input
         label="Google Maps link"
         placeholder="https://maps.google.com/…"
@@ -257,7 +252,6 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         error={errors.maps_url?.message}
       />
 
-      {/* Instagram */}
       <Input
         label="Instagram reference"
         placeholder="@username or post URL"
@@ -265,17 +259,13 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         error={errors.instagram_ref?.message}
       />
 
-      {/* Date / Someday */}
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-2 cursor-pointer">
           <div className="relative">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              {...register('is_someday')}
-            />
+            <input type="checkbox" className="sr-only peer" {...register('is_someday')} />
             <div className="h-5 w-9 rounded-full bg-cream-200 peer-checked:bg-sand-500 transition-colors" />
-            <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
+            <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow
+              transition-transform peer-checked:translate-x-4" />
           </div>
           <span className="text-sm text-warm-700">Someday — no specific date</span>
         </label>
@@ -290,15 +280,13 @@ export function PlanForm({ coupleId, profileId, categories, plan, onDone }: Plan
         )}
       </div>
 
-      {/* Images */}
       <PlanImageUpload
-        coupleId={coupleId}
+        coupleId={session.coupleId}
         planId={plan?.id}
         value={images}
         onChange={setImages}
       />
 
-      {/* Submit */}
       <Button
         type="submit"
         size="lg"

@@ -1,12 +1,12 @@
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import type { PlanFilters, Category, Profile, PlanStatus } from '../../types'
+import type { PlanFilters, Category, Session, PlanStatus } from '../../types'
 
 interface FilterBarProps {
   filters: PlanFilters
   onChange: (f: PlanFilters) => void
   categories: Category[]
-  profiles: Profile[]
+  session: Session
 }
 
 const STATUSES: Array<{ value: PlanStatus | 'all'; label: string }> = [
@@ -17,7 +17,7 @@ const STATUSES: Array<{ value: PlanStatus | 'all'; label: string }> = [
   { value: 'canceled', label: 'Canceled' },
 ]
 
-export function FilterBar({ filters, onChange, categories, profiles }: FilterBarProps) {
+export function FilterBar({ filters, onChange, categories, session }: FilterBarProps) {
   const activeCount = [
     filters.status !== 'all',
     filters.categoryId !== 'all',
@@ -50,7 +50,9 @@ export function FilterBar({ filters, onChange, categories, profiles }: FilterBar
           <select
             value={filters.categoryId}
             onChange={(e) => onChange({ ...filters, categoryId: e.target.value })}
-            className="w-full appearance-none rounded-xl border border-cream-300 bg-cream-50 px-3 py-1.5 text-xs text-warm-700 focus:outline-none focus:ring-1 focus:ring-sand-400 pr-6"
+            className="w-full appearance-none rounded-xl border border-cream-300 bg-cream-50
+              px-3 py-1.5 text-xs text-warm-700 focus:outline-none focus:ring-1
+              focus:ring-sand-400 pr-6"
           >
             <option value="all">All categories</option>
             {categories.map((c) => (
@@ -59,31 +61,35 @@ export function FilterBar({ filters, onChange, categories, profiles }: FilterBar
               </option>
             ))}
           </select>
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-warm-400 pointer-events-none text-[10px]">▾</span>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-warm-400
+            pointer-events-none text-[10px]">▾</span>
         </div>
 
-        {profiles.length > 1 && (
-          <div className="relative flex-1">
-            <select
-              value={filters.proposedBy}
-              onChange={(e) => onChange({ ...filters, proposedBy: e.target.value })}
-              className="w-full appearance-none rounded-xl border border-cream-300 bg-cream-50 px-3 py-1.5 text-xs text-warm-700 focus:outline-none focus:ring-1 focus:ring-sand-400 pr-6"
-            >
-              <option value="all">Anyone</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-warm-400 pointer-events-none text-[10px]">▾</span>
-          </div>
-        )}
+        {/* Proposer filter — always shown (two known partners) */}
+        <div className="relative flex-1">
+          <select
+            value={filters.proposedBy}
+            onChange={(e) =>
+              onChange({ ...filters, proposedBy: e.target.value as PlanFilters['proposedBy'] })
+            }
+            className="w-full appearance-none rounded-xl border border-cream-300 bg-cream-50
+              px-3 py-1.5 text-xs text-warm-700 focus:outline-none focus:ring-1
+              focus:ring-sand-400 pr-6"
+          >
+            <option value="all">Anyone</option>
+            <option value="one">{session.partnerOneName}</option>
+            <option value="two">{session.partnerTwoName}</option>
+          </select>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-warm-400
+            pointer-events-none text-[10px]">▾</span>
+        </div>
 
         {activeCount > 0 && (
           <button
             onClick={() => onChange({ status: 'all', categoryId: 'all', proposedBy: 'all' })}
-            className="shrink-0 rounded-xl border border-blush-300 bg-blush-100 px-3 py-1.5 text-xs text-blush-500 font-medium hover:bg-blush-200 transition-colors flex items-center gap-1"
+            className="shrink-0 rounded-xl border border-blush-300 bg-blush-100 px-3 py-1.5
+              text-xs text-blush-500 font-medium hover:bg-blush-200 transition-colors
+              flex items-center gap-1"
           >
             <SlidersHorizontal size={10} />
             Clear

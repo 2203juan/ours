@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react'
-import { Camera, X, Plus } from 'lucide-react'
+import { Camera, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { supabase, PLAN_IMAGES_BUCKET, AVATARS_BUCKET } from '../../lib/supabase'
+import { supabase, PLAN_IMAGES_BUCKET } from '../../lib/supabase'
 
 // ── Plan image uploader (multiple) ────────────────────────────────────────────
 
 interface PlanImageUploadProps {
   coupleId: string
-  planId?: string // for temp path if no plan yet
+  planId?: string
   value: string[]
   onChange: (urls: string[]) => void
 }
@@ -24,10 +24,9 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
       for (const file of Array.from(files)) {
         const slug = planId ?? `temp-${Date.now()}`
         const path = `${coupleId}/${slug}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-        const { error } = await supabase.storage.from(PLAN_IMAGES_BUCKET).upload(path, file, {
-          upsert: true,
-          contentType: file.type,
-        })
+        const { error } = await supabase.storage
+          .from(PLAN_IMAGES_BUCKET)
+          .upload(path, file, { upsert: true, contentType: file.type })
         if (error) throw error
         const { data } = supabase.storage.from(PLAN_IMAGES_BUCKET).getPublicUrl(path)
         newUrls.push(data.publicUrl)
@@ -40,10 +39,6 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
     }
   }
 
-  const removeImage = (url: string) => {
-    onChange(value.filter((u) => u !== url))
-  }
-
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-warm-600 uppercase tracking-wide">Photos</label>
@@ -53,8 +48,9 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
             <img src={url} alt="" className="h-full w-full object-cover" />
             <button
               type="button"
-              onClick={() => removeImage(url)}
-              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-warm-800/70 flex items-center justify-center text-white"
+              onClick={() => onChange(value.filter((u) => u !== url))}
+              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-warm-800/70
+                flex items-center justify-center text-white"
             >
               <X size={10} />
             </button>
@@ -91,72 +87,5 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
         />
       </div>
     </div>
-  )
-}
-
-// ── Single avatar uploader ────────────────────────────────────────────────────
-
-interface AvatarUploadProps {
-  coupleId: string
-  profileId: string
-  name: string
-  value: string | null
-  onChange: (url: string) => void
-}
-
-export function AvatarUpload({ coupleId, profileId, name, value, onChange }: AvatarUploadProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
-  const initial = name ? name[0].toUpperCase() : '?'
-
-  const handleFile = async (files: FileList | null) => {
-    if (!files || !files.length) return
-    const file = files[0]
-    setUploading(true)
-    try {
-      const path = `${coupleId}/${profileId}`
-      const { error } = await supabase.storage.from(AVATARS_BUCKET).upload(path, file, {
-        upsert: true,
-        contentType: file.type,
-      })
-      if (error) throw error
-      const { data } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(path)
-      // Bust cache with a timestamp
-      onChange(`${data.publicUrl}?t=${Date.now()}`)
-    } catch (e) {
-      console.error('Avatar upload failed', e)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => inputRef.current?.click()}
-      disabled={uploading}
-      className="relative h-20 w-20 rounded-full overflow-hidden bg-gradient-to-br from-sand-300 to-blush-300 flex items-center justify-center"
-    >
-      {value ? (
-        <img src={value} alt={name} className="h-full w-full object-cover" />
-      ) : (
-        <span className="text-white text-2xl font-medium">{initial}</span>
-      )}
-      <div className="absolute inset-0 bg-warm-800/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-full">
-        {uploading ? (
-          <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <Plus size={20} className="text-white" />
-        )}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => handleFile(e.target.files)}
-      />
-    </button>
   )
 }
