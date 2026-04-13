@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Heart, ArrowRight, Copy, Check } from 'lucide-react'
+import { Heart, ArrowRight, Copy, Check, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { generateCoupleCode } from '../../lib/utils'
+import { generateCoupleCode, normalizeCode, validateCodeFormat } from '../../lib/utils'
 import { DEFAULT_CATEGORIES, type AvatarKey } from '../../types'
 import { useSessionStore } from '../../stores/sessionStore'
 import { Button } from '../ui/Button'
@@ -30,12 +30,15 @@ export function OnboardingFlow() {
   const [loading, setLoading] = useState(false)
 
   // ── Create state ──
-  const [coupleName, setCoupleName]     = useState('')
-  const [p1Name, setP1Name]             = useState('')
-  const [p1Avatar, setP1Avatar]         = useState<AvatarKey>('blossom')
-  const [p2Name, setP2Name]             = useState('')
-  const [p2Avatar, setP2Avatar]         = useState<AvatarKey>('sage')
+  const [coupleName, setCoupleName]       = useState('')
+  const [p1Name, setP1Name]               = useState('')
+  const [p1Avatar, setP1Avatar]           = useState<AvatarKey>('blossom')
+  const [p2Name, setP2Name]               = useState('')
+  const [p2Avatar, setP2Avatar]           = useState<AvatarKey>('sage')
   const [createdCouple, setCreatedCouple] = useState<Session | null>(null)
+  const [codeMode, setCodeMode]           = useState<'auto' | 'custom'>('auto')
+  const [customCodeInput, setCustomCodeInput] = useState('')
+  const [customCodeError, setCustomCodeError] = useState('')
 
   // ── Join state ──
   const [joinCode, setJoinCode]         = useState('')
@@ -47,10 +50,40 @@ export function OnboardingFlow() {
 
   const handleCreateCouple = async () => {
     if (!p1Name.trim() || !p2Name.trim()) return
+
+    // Validate custom code before going async
+    if (codeMode === 'custom') {
+      const normalized = normalizeCode(customCodeInput)
+      const formatError = validateCodeFormat(normalized)
+      if (formatError) {
+        setCustomCodeError(formatError)
+        return
+      }
+      setCustomCodeError('')
+    }
+
     setLoading(true)
     try {
-      const code = generateCoupleCode()
       const name = coupleName.trim() || `${p1Name.trim()} & ${p2Name.trim()}`
+
+      let code: string
+      if (codeMode === 'custom') {
+        code = normalizeCode(customCodeInput)
+        // Check uniqueness
+        const { data: existing } = await supabase
+          .from('couples')
+          .select('id')
+          .eq('code', code)
+          .maybeSingle()
+        if (existing) {
+          setCustomCodeError('That code is already taken. Try a different one.')
+          setLoading(false)
+          return
+        }
+      } else {
+        // Auto-generate; retry once on collision (DB UNIQUE constraint)
+        code = generateCoupleCode()
+      }
 
       const { data, error } = await supabase
         .from('couples')
@@ -64,7 +97,43 @@ export function OnboardingFlow() {
         })
         .select()
         .single()
-      if (error) throw error
+      if (error) {
+        // Retry once if auto code collided at DB level
+        if (codeMode === 'auto' && error.code === '23505') {
+          code = generateCoupleCode()
+          const retry = await supabase
+            .from('couples')
+            .insert({
+              code,
+              couple_name: name,
+              partner_one_name: p1Name.trim(),
+              partner_two_name: p2Name.trim(),
+              partner_one_avatar: p1Avatar,
+              partner_two_avatar: p2Avatar,
+            })
+            .select()
+            .single()
+          if (retry.error) throw retry.error
+          const finalData = retry.data
+          const partial: Session = {
+            coupleId: finalData.id,
+            coupleCode: code,
+            coupleName: name,
+            partnerOneName: p1Name.trim(),
+            partnerOneAvatar: p1Avatar,
+            partnerTwoName: p2Name.trim(),
+            partnerTwoAvatar: p2Avatar,
+            partnerKey: null,
+          }
+          await supabase.from('categories').insert(
+            DEFAULT_CATEGORIES.map((c) => ({ ...c, couple_id: finalData.id }))
+          )
+          setCreatedCouple(partial)
+          setStep('create-who-are-you')
+          return
+        }
+        throw error
+      }
 
       // Seed default categories
       await supabase.from('categories').insert(
@@ -186,6 +255,9 @@ export function OnboardingFlow() {
             p1Avatar={p1Avatar} setP1Avatar={setP1Avatar}
             p2Name={p2Name} setP2Name={setP2Name}
             p2Avatar={p2Avatar} setP2Avatar={setP2Avatar}
+            codeMode={codeMode} setCodeMode={setCodeMode}
+            customCodeInput={customCodeInput} setCustomCodeInput={setCustomCodeInput}
+            customCodeError={customCodeError} setCustomCodeError={setCustomCodeError}
             loading={loading}
             onBack={() => setStep('welcome')}
             onContinue={handleCreateCouple}
@@ -257,6 +329,9 @@ interface CreateNamesStepProps {
   p1Avatar: AvatarKey; setP1Avatar: (k: AvatarKey) => void
   p2Name: string; setP2Name: (v: string) => void
   p2Avatar: AvatarKey; setP2Avatar: (k: AvatarKey) => void
+  codeMode: 'auto' | 'custom'; setCodeMode: (m: 'auto' | 'custom') => void
+  customCodeInput: string; setCustomCodeInput: (v: string) => void
+  customCodeError: string; setCustomCodeError: (v: string) => void
   loading: boolean
   onBack: () => void
   onContinue: () => void
@@ -266,6 +341,9 @@ function CreateNamesStep({
   coupleName, setCoupleName,
   p1Name, setP1Name, p1Avatar, setP1Avatar,
   p2Name, setP2Name, p2Avatar, setP2Avatar,
+  codeMode, setCodeMode,
+  customCodeInput, setCustomCodeInput,
+  customCodeError, setCustomCodeError,
   loading, onBack, onContinue,
 }: CreateNamesStepProps) {
   const canContinue = p1Name.trim().length > 0 && p2Name.trim().length > 0
@@ -325,6 +403,70 @@ function CreateNamesStep({
           onChange={setP2Avatar}
           label="Color"
         />
+      </div>
+
+      {/* Couple code */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-cream-200" />
+          <span className="text-xs text-warm-400 font-medium uppercase tracking-wide">Couple code</span>
+          <div className="flex-1 h-px bg-cream-200" />
+        </div>
+
+        {/* Segmented control */}
+        <div className="flex rounded-2xl bg-cream-100 p-1 gap-1">
+          {(['auto', 'custom'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => { setCodeMode(mode); setCustomCodeError('') }}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                codeMode === mode
+                  ? 'bg-white text-warm-800 shadow-soft'
+                  : 'text-warm-400 hover:text-warm-600'
+              }`}
+            >
+              {mode === 'auto' ? 'Auto-generate' : 'Custom'}
+            </button>
+          ))}
+        </div>
+
+        {codeMode === 'auto' ? (
+          <p className="text-xs text-warm-400 text-center">
+            A random code will be generated for you.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <div className="relative">
+              <input
+                placeholder="e.g. ANAMAR"
+                value={customCodeInput}
+                onChange={(e) => {
+                  setCustomCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+                  setCustomCodeError('')
+                }}
+                maxLength={12}
+                className="w-full rounded-2xl border border-cream-300 px-4 py-3 text-center
+                  text-lg font-medium tracking-[0.2em] uppercase
+                  focus:outline-none focus:ring-2 focus:ring-sand-400
+                  placeholder:tracking-normal placeholder:text-warm-300"
+              />
+              {customCodeInput.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setCustomCodeInput(''); setCustomCodeError('') }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-300 hover:text-warm-500"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              )}
+            </div>
+            {customCodeError && (
+              <p className="text-xs text-red-500 text-center">{customCodeError}</p>
+            )}
+            <p className="text-xs text-warm-400 text-center">4–12 letters and numbers only.</p>
+          </div>
+        )}
       </div>
 
       <Button

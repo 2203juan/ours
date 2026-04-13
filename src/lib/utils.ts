@@ -15,6 +15,19 @@ export function generateCoupleCode(): string {
   return code
 }
 
+/** Strip spaces/dashes and uppercase — normalizes raw user input into a code. */
+export function normalizeCode(raw: string): string {
+  return raw.replace(/[\s\-]/g, '').toUpperCase()
+}
+
+/** Returns an error string if the code format is invalid, otherwise null. */
+export function validateCodeFormat(code: string): string | null {
+  if (code.length < 4) return 'Code must be at least 4 characters.'
+  if (code.length > 12) return 'Code must be 12 characters or fewer.'
+  if (!/^[A-Z0-9]+$/.test(code)) return 'Only letters and numbers are allowed.'
+  return null
+}
+
 /** Format a currency amount with a fallback. */
 export function formatBudget(amount: number | null | undefined): string {
   if (amount == null) return ''
