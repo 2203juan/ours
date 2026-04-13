@@ -1,7 +1,7 @@
 import type { Plan, Session } from '../../types'
 import { getPartnerName, getPartnerAvatar } from '../../types'
 import { AvatarIcon } from '../ui/AvatarIcon'
-import { StatusDot, PriorityBadge } from '../ui/Badge'
+import { PriorityBadge } from '../ui/Badge'
 import { cn, truncate, formatBudget, formatDate } from '../../lib/utils'
 import { MapPin, CalendarDays, DollarSign } from 'lucide-react'
 import { isValidProposer } from '../../hooks/usePlans'
@@ -13,7 +13,6 @@ interface PlanItemProps {
 }
 
 export function PlanItem({ plan, session, onClick }: PlanItemProps) {
-  const cancelled = plan.status === 'canceled'
   const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
   const isMe = proposerKey === session.partnerKey
 
@@ -26,18 +25,10 @@ export function PlanItem({ plan, session, onClick }: PlanItemProps) {
         'border-b border-cream-100 last:border-b-0'
       )}
     >
-      {/* Status dot */}
-      <StatusDot status={plan.status} className="shrink-0" />
-
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
-          <span
-            className={cn(
-              'text-sm font-medium text-warm-800 truncate',
-              cancelled && 'line-through text-warm-400'
-            )}
-          >
+          <span className="text-sm font-medium text-warm-800 truncate">
             {plan.name}
           </span>
           <PriorityBadge priority={plan.priority} />
@@ -70,7 +61,7 @@ export function PlanItem({ plan, session, onClick }: PlanItemProps) {
         </div>
       </div>
 
-      {/* Proposer avatar — subtle opacity if it's me */}
+      {/* Proposer avatar */}
       {proposerKey && (
         <div className={cn('shrink-0', isMe ? 'opacity-60' : '')}>
           <AvatarIcon

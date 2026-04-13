@@ -24,7 +24,7 @@ export interface Category {
   created_at: string
 }
 
-export type PlanStatus = 'pending' | 'selected' | 'completed' | 'canceled'
+export type PlanStatus = 'to_do' | 'done'
 export type PlanPriority = 'low' | 'normal' | 'high'
 
 export interface Plan {
@@ -108,7 +108,6 @@ export function getPartnerAvatar(session: Session, key: 'one' | 'two'): AvatarKe
 // =====================================================
 
 export interface PlanFilters {
-  status: PlanStatus | 'all'
   categoryId: string | 'all'
   proposedBy: PartnerKey | 'all'
 }
@@ -170,10 +169,8 @@ export const DEFAULT_CATEGORIES: Array<{ name: string; emoji: string; sort_order
 // =====================================================
 
 export const STATUS_LABELS: Record<PlanStatus, string> = {
-  pending: 'Pending',
-  selected: 'Selected',
-  completed: 'Done',
-  canceled: 'Canceled',
+  to_do: 'To do',
+  done: 'Done',
 }
 
 export const PRIORITY_LABELS: Record<PlanPriority, string> = {

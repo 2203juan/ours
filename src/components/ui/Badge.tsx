@@ -4,24 +4,18 @@ import type { PlanStatus, PlanPriority } from '../../types'
 // ── Status badge ─────────────────────────────────────────────────────────────
 
 const statusStyles: Record<PlanStatus, string> = {
-  pending: 'bg-cream-200 text-warm-600',
-  selected: 'bg-sand-300 text-sand-600',
-  completed: 'bg-sage-300 text-sage-600',
-  canceled: 'bg-red-100 text-red-500',
+  to_do: 'bg-cream-200 text-warm-600',
+  done:  'bg-sage-300/40 text-sage-600',
 }
 
 const statusLabels: Record<PlanStatus, string> = {
-  pending: 'Pending',
-  selected: 'Selected',
-  completed: 'Done',
-  canceled: 'Canceled',
+  to_do: 'To do',
+  done:  'Done',
 }
 
 const statusDot: Record<PlanStatus, string> = {
-  pending: 'bg-warm-400',
-  selected: 'bg-sand-500',
-  completed: 'bg-sage-500',
-  canceled: 'bg-red-400',
+  to_do: 'bg-warm-400',
+  done:  'bg-sage-500',
 }
 
 interface StatusBadgeProps {
@@ -41,19 +35,6 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       <span className={cn('h-1.5 w-1.5 rounded-full', statusDot[status])} />
       {statusLabels[status]}
     </span>
-  )
-}
-
-/** Compact dot-only status indicator */
-export function StatusDot({ status, className }: StatusBadgeProps) {
-  return (
-    <span
-      className={cn(
-        'inline-block h-2 w-2 rounded-full shrink-0',
-        statusDot[status],
-        className
-      )}
-    />
   )
 }
 

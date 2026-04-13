@@ -4,7 +4,7 @@ import {
   Instagram, ExternalLink, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Plan, PlanStatus, Category, Session } from '../../types'
+import type { Plan, Category, Session } from '../../types'
 import { getPartnerName, getPartnerAvatar } from '../../types'
 import { useUpdatePlan, useDeletePlan, isValidProposer } from '../../hooks/usePlans'
 import { AvatarIcon } from '../ui/AvatarIcon'
@@ -21,12 +21,6 @@ interface PlanDetailProps {
   onClose: () => void
 }
 
-const STATUS_ACTIONS: Array<{ status: PlanStatus; label: string; style: string }> = [
-  { status: 'pending',   label: 'Mark Pending',  style: 'bg-cream-100 text-warm-600 border border-cream-300' },
-  { status: 'selected',  label: '✓ Select',      style: 'bg-sand-100 text-sand-600 border border-sand-300' },
-  { status: 'completed', label: '✓ Done',         style: 'bg-sage-300/40 text-sage-600 border border-sage-300' },
-  { status: 'canceled',  label: '× Cancel',       style: 'bg-red-50 text-red-500 border border-red-200' },
-]
 
 export function PlanDetail({ plan, categories, session, onClose }: PlanDetailProps) {
   const updatePlan = useUpdatePlan()
@@ -37,11 +31,11 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
 
   const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
 
-  const handleStatusChange = async (status: PlanStatus) => {
+  const handleStatusChange = async (status: 'to_do' | 'done') => {
     if (status === plan.status) return
     try {
       await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload: { status } })
-      toast.success(status === 'completed' ? '🎉 Marked as done!' : 'Status updated')
+      toast.success(status === 'done' ? '🎉 Marked as done!' : 'Moved back to To do')
     } catch {
       toast.error('Could not update status.')
     }
@@ -231,25 +225,28 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
           </div>
         )}
 
-        {/* Status actions */}
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-warm-400 uppercase tracking-wide">Change status</p>
-          <div className="grid grid-cols-2 gap-2">
-            {STATUS_ACTIONS.map((a) => (
-              <button
-                key={a.status}
-                onClick={() => handleStatusChange(a.status)}
-                disabled={updatePlan.isPending}
-                className={`rounded-2xl px-3 py-2.5 text-sm font-medium transition-all
-                  ${a.style}
-                  ${plan.status === a.status ? 'ring-2 ring-offset-1 ring-sand-400 font-semibold' : 'hover:opacity-80'}
-                `}
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Status toggle */}
+        {plan.status === 'to_do' ? (
+          <button
+            onClick={() => handleStatusChange('done')}
+            disabled={updatePlan.isPending}
+            className="w-full rounded-2xl bg-sage-300/40 text-sage-600 border border-sage-300
+              py-3.5 text-sm font-semibold hover:bg-sage-300/60 active:scale-[0.98]
+              transition-all"
+          >
+            ✓ Mark as done
+          </button>
+        ) : (
+          <button
+            onClick={() => handleStatusChange('to_do')}
+            disabled={updatePlan.isPending}
+            className="w-full rounded-2xl bg-cream-100 text-warm-500 border border-cream-300
+              py-3 text-sm font-medium hover:bg-cream-200 active:scale-[0.98]
+              transition-all"
+          >
+            ↩ Move back to To do
+          </button>
+        )}
 
         {/* Confirm delete */}
         {confirmDelete && (

@@ -11,7 +11,7 @@ import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
 import { normalizeSocialUrl } from '../../lib/utils'
-import type { Plan, Category, PlanPriority, PlanStatus, Session } from '../../types'
+import type { Plan, Category, PlanPriority, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,6 @@ const schema = z.object({
   category_id: z.string().optional(),
   description: z.string().max(500).optional(),
   priority: z.enum(['low', 'normal', 'high']),
-  status: z.enum(['pending', 'selected', 'completed', 'canceled']),
   budget_estimate: z.string().optional(),
   location_text: z.string().max(120).optional(),
   maps_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
@@ -67,7 +66,6 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       category_id: plan?.category_id ?? '',
       description: plan?.description ?? '',
       priority: plan?.priority ?? 'normal',
-      status: plan?.status ?? 'pending',
       budget_estimate: plan?.budget_estimate != null ? String(plan.budget_estimate) : '',
       location_text: plan?.location_text ?? '',
       maps_url: plan?.maps_url ?? '',
@@ -87,7 +85,6 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         category_id: values.category_id || null,
         description: values.description || null,
         priority: values.priority as PlanPriority,
-        status: values.status as PlanStatus,
         budget_estimate: values.budget_estimate ? parseFloat(values.budget_estimate) : null,
         location_text: values.location_text || null,
         maps_url: values.maps_url || null,
@@ -212,25 +209,11 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         error={errors.description?.message}
       />
 
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <Select label="Priority" {...register('priority')}>
-            <option value="low">↓ Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">↑ High</option>
-          </Select>
-        </div>
-        {isEditing && (
-          <div className="flex-1">
-            <Select label="Status" {...register('status')}>
-              <option value="pending">Pending</option>
-              <option value="selected">Selected</option>
-              <option value="completed">Done</option>
-              <option value="canceled">Canceled</option>
-            </Select>
-          </div>
-        )}
-      </div>
+      <Select label="Priority" {...register('priority')}>
+        <option value="low">↓ Low</option>
+        <option value="normal">Normal</option>
+        <option value="high">↑ High</option>
+      </Select>
 
       <Input
         label="Estimated budget"

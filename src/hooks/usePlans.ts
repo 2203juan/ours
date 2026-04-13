@@ -30,7 +30,6 @@ export function usePlans(coupleId: string) {
 
 export function filterPlans(plans: Plan[], filters: PlanFilters): Plan[] {
   return plans.filter((p) => {
-    if (filters.status !== 'all' && p.status !== filters.status) return false
     if (filters.categoryId !== 'all' && p.category_id !== filters.categoryId) return false
     if (filters.proposedBy !== 'all' && p.proposed_by !== (filters.proposedBy as string)) return false
     return true

@@ -1,10 +1,12 @@
 import type { Plan, Category, PlanFilters, Session } from '../../types'
 import { filterPlans } from '../../hooks/usePlans'
 import { CategorySection } from './CategorySection'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, CheckCheck } from 'lucide-react'
 
 interface PlanListProps {
-  plans: Plan[]
+  plans: Plan[]         // already filtered by view (to_do | done)
+  allPlansCount: number // total across both views, for empty state copy
+  view: 'to_do' | 'done'
   categories: Category[]
   filters: PlanFilters
   session: Session
@@ -14,6 +16,8 @@ interface PlanListProps {
 
 export function PlanList({
   plans,
+  allPlansCount,
+  view,
   categories,
   filters,
   session,
@@ -35,12 +39,25 @@ export function PlanList({
   if (uncategorized.length) groups.push({ category: null, plans: uncategorized })
 
   if (!filtered.length) {
+    if (view === 'done') {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+          <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
+            <CheckCheck size={22} className="text-warm-300" />
+          </div>
+          <p className="text-warm-600 font-medium mb-1">Nothing done yet</p>
+          <p className="text-sm text-warm-400">Completed plans will appear here.</p>
+        </div>
+      )
+    }
+
+    // to_do view
     return (
       <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
         <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
           <ClipboardList size={22} className="text-warm-300" />
         </div>
-        {plans.length === 0 ? (
+        {allPlansCount === 0 ? (
           <>
             <p className="text-warm-600 font-medium mb-1">No plans yet</p>
             <p className="text-sm text-warm-400 mb-6">Start adding things you want to do together.</p>
@@ -50,6 +67,11 @@ export function PlanList({
             >
               Add your first plan →
             </button>
+          </>
+        ) : plans.length === 0 ? (
+          <>
+            <p className="text-warm-600 font-medium mb-1">All done! ✨</p>
+            <p className="text-sm text-warm-400">Everything is marked as done. Add something new.</p>
           </>
         ) : (
           <>

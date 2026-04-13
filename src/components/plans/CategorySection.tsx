@@ -24,7 +24,6 @@ export function CategorySection({
   if (!plans.length) return null
 
   const label = category ? `${category.emoji} ${category.name}` : '· Uncategorized'
-  const pendingCount = plans.filter((p) => p.status === 'pending').length
 
   return (
     <div className="border-b border-cream-200 last:border-b-0">
@@ -38,7 +37,6 @@ export function CategorySection({
           </span>
           <span className="text-[10px] text-warm-400 font-medium">
             {plans.length} {plans.length === 1 ? 'plan' : 'plans'}
-            {pendingCount > 0 && pendingCount !== plans.length && ` · ${pendingCount} pending`}
           </span>
         </div>
         <ChevronDown

@@ -9,10 +9,10 @@ import { PlanDetail } from '../components/plans/PlanDetail'
 import { PlanForm } from '../components/plans/PlanForm'
 import { Sheet } from '../components/ui/Sheet'
 import { AvatarIcon } from '../components/ui/AvatarIcon'
-import type { Plan, PlanFilters } from '../types'
+import { cn } from '../lib/utils'
+import type { PlanFilters } from '../types'
 
 const DEFAULT_FILTERS: PlanFilters = {
-  status: 'all',
   categoryId: 'all',
   proposedBy: 'all',
 }
@@ -22,12 +22,19 @@ export function HomePage() {
   const { data: plans = [], isLoading } = usePlans(session.coupleId)
   const { data: categories = [] } = useCategories(session.coupleId)
 
+  const [view, setView] = useState<'to_do' | 'done'>('to_do')
   const [filters, setFilters] = useState<PlanFilters>(DEFAULT_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
-  const pendingCount = plans.filter((p) => p.status === 'pending').length
-  const doneCount = plans.filter((p) => p.status === 'completed').length
+  // Always use the live plan from the query so detail updates after mutations
+  const selectedPlan = selectedPlanId
+    ? (plans.find((p) => p.id === selectedPlanId) ?? null)
+    : null
+
+  const todoCount = plans.filter((p) => p.status === 'to_do').length
+  const doneCount = plans.filter((p) => p.status === 'done').length
+  const viewPlans  = plans.filter((p) => p.status === view)
 
   return (
     <>
@@ -41,10 +48,9 @@ export function HomePage() {
                 <Heart size={14} className="fill-blush-300 text-blush-300" />
               </h1>
               <p className="text-xs text-warm-400 mt-0.5">
-                {pendingCount} to do · {doneCount} done
+                {todoCount} to do · {doneCount} done
               </p>
             </div>
-            {/* Both partner avatars */}
             <div className="flex -space-x-2">
               <AvatarIcon
                 name={session.partnerOneName}
@@ -59,6 +65,24 @@ export function HomePage() {
                 className="ring-2 ring-white"
               />
             </div>
+          </div>
+
+          {/* View tabs */}
+          <div className="flex mt-3 bg-cream-100 rounded-2xl p-1 gap-1">
+            {(['to_do', 'done'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={cn(
+                  'flex-1 py-1.5 rounded-xl text-sm font-medium transition-all',
+                  view === v
+                    ? 'bg-white text-warm-800 shadow-soft'
+                    : 'text-warm-400 hover:text-warm-600'
+                )}
+              >
+                {v === 'to_do' ? 'To do' : 'Done'}
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -78,25 +102,29 @@ export function HomePage() {
         </div>
       ) : (
         <PlanList
-          plans={plans}
+          plans={viewPlans}
+          allPlansCount={plans.length}
+          view={view}
           categories={categories}
           filters={filters}
           session={session}
-          onPlanClick={setSelectedPlan}
+          onPlanClick={(p) => setSelectedPlanId(p.id)}
           onAddClick={() => setAddOpen(true)}
         />
       )}
 
-      {/* ── FAB ── */}
-      <button
-        onClick={() => setAddOpen(true)}
-        className="fixed bottom-20 right-5 z-30 h-14 w-14 rounded-full bg-warm-800 text-white
-          shadow-card flex items-center justify-center hover:bg-warm-700 active:scale-95
-          transition-all"
-        aria-label="Add plan"
-      >
-        <Plus size={24} strokeWidth={2} />
-      </button>
+      {/* ── FAB (only on To do view) ── */}
+      {view === 'to_do' && (
+        <button
+          onClick={() => setAddOpen(true)}
+          className="fixed bottom-20 right-5 z-30 h-14 w-14 rounded-full bg-warm-800 text-white
+            shadow-card flex items-center justify-center hover:bg-warm-700 active:scale-95
+            transition-all"
+          aria-label="Add plan"
+        >
+          <Plus size={24} strokeWidth={2} />
+        </button>
+      )}
 
       {/* ── Add plan sheet ── */}
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="New plan" height="full">
@@ -109,12 +137,12 @@ export function HomePage() {
 
       {/* ── Plan detail sheet ── */}
       {selectedPlan && (
-        <Sheet open={!!selectedPlan} onClose={() => setSelectedPlan(null)} height="full">
+        <Sheet open={!!selectedPlan} onClose={() => setSelectedPlanId(null)} height="full">
           <PlanDetail
             plan={selectedPlan}
             categories={categories}
             session={session}
-            onClose={() => setSelectedPlan(null)}
+            onClose={() => setSelectedPlanId(null)}
           />
         </Sheet>
       )}

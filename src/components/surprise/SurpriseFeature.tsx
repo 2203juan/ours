@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Shuffle, RefreshCw, Check } from 'lucide-react'
+import { Shuffle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Plan, Category, Session } from '../../types'
 import { getPartnerName, getPartnerAvatar } from '../../types'
 import { pickRandom, cn } from '../../lib/utils'
-import { useUpdatePlan, isValidProposer } from '../../hooks/usePlans'
+import { isValidProposer } from '../../hooks/usePlans'
 import { AvatarIcon } from '../ui/AvatarIcon'
-import { StatusBadge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 
 interface SurpriseFeatureProps {
@@ -16,21 +15,20 @@ interface SurpriseFeatureProps {
 }
 
 export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureProps) {
-  const updatePlan = useUpdatePlan()
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | 'all'>('all')
   const [result, setResult] = useState<Plan | null>(null)
   const [spinning, setSpinning] = useState(false)
 
-  const pendingPlans = plans.filter(
+  const todoPlans = plans.filter(
     (p) =>
-      p.status === 'pending' &&
+      p.status === 'to_do' &&
       (selectedCategoryId === 'all' || p.category_id === selectedCategoryId)
   )
 
   const spin = () => {
-    const picked = pickRandom(pendingPlans)
+    const picked = pickRandom(todoPlans)
     if (!picked) {
-      toast("No pending plans in that category 🍂", { icon: '🌿' })
+      toast("No plans in that category 🍂", { icon: '🌿' })
       return
     }
     setSpinning(true)
@@ -39,21 +37,6 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
       setResult(picked)
       setSpinning(false)
     }, 600)
-  }
-
-  const handleSelect = async () => {
-    if (!result) return
-    try {
-      await updatePlan.mutateAsync({
-        id: result.id,
-        coupleId: session.coupleId,
-        payload: { status: 'selected' },
-      })
-      toast.success('Plan selected! Time to make it happen 🌟')
-      setResult(null)
-    } catch {
-      toast.error('Could not update plan.')
-    }
   }
 
   return (
@@ -68,12 +51,12 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
             label="All plans"
             emoji="✨"
             active={selectedCategoryId === 'all'}
-            count={plans.filter((p) => p.status === 'pending').length}
+            count={plans.filter((p) => p.status === 'to_do').length}
             onClick={() => setSelectedCategoryId('all')}
           />
           {categories.map((c) => {
             const count = plans.filter(
-              (p) => p.status === 'pending' && p.category_id === c.id
+              (p) => p.status === 'to_do' && p.category_id === c.id
             ).length
             return (
               <CategoryChip
@@ -92,7 +75,7 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
       {/* Spin button */}
       <button
         onClick={spin}
-        disabled={pendingPlans.length === 0}
+        disabled={todoPlans.length === 0}
         className={cn(
           'mx-auto h-28 w-28 rounded-full flex flex-col items-center justify-center gap-2',
           'bg-gradient-to-br from-sand-400 to-blush-300 text-white shadow-card',
@@ -112,9 +95,9 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
       </button>
 
       <p className="text-center text-xs text-warm-400">
-        {pendingPlans.length === 0
-          ? 'No pending plans here.'
-          : `${pendingPlans.length} pending plan${pendingPlans.length !== 1 ? 's' : ''} to choose from`}
+        {todoPlans.length === 0
+          ? 'No plans to pick from.'
+          : `${todoPlans.length} plan${todoPlans.length !== 1 ? 's' : ''} to choose from`}
       </p>
 
       {/* Result card */}
@@ -129,14 +112,11 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
           )}
           <div className="p-5 flex flex-col gap-3">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <StatusBadge status={result.status} />
-                {result.category && (
-                  <span className="text-xs text-warm-400">
-                    {result.category.emoji} {result.category.name}
-                  </span>
-                )}
-              </div>
+              {result.category && (
+                <p className="text-xs text-warm-400 mb-1">
+                  {result.category.emoji} {result.category.name}
+                </p>
+              )}
               <h3 className="font-serif text-2xl text-warm-800">{result.name}</h3>
               {result.description && (
                 <p className="text-sm text-warm-500 mt-1 line-clamp-2">{result.description}</p>
@@ -158,18 +138,19 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
               <Button
                 variant="primary"
                 size="md"
-                onClick={handleSelect}
-                loading={updatePlan.isPending}
+                onClick={() => {
+                  toast.success("Let's go! 🌟")
+                  setResult(null)
+                }}
                 className="flex-1"
               >
-                <Check size={16} />
                 Let's do this!
               </Button>
               <Button
                 variant="secondary"
                 size="md"
                 onClick={spin}
-                disabled={pendingPlans.length <= 1}
+                disabled={todoPlans.length <= 1}
               >
                 <RefreshCw size={14} />
                 Another
