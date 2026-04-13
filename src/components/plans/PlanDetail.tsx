@@ -12,7 +12,7 @@ import { StatusBadge, PriorityBadge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { Sheet } from '../ui/Sheet'
 import { PlanForm } from './PlanForm'
-import { formatBudget, formatDate } from '../../lib/utils'
+import { formatBudget, formatDate, normalizeSocialUrl } from '../../lib/utils'
 
 interface PlanDetailProps {
   plan: Plan
@@ -69,6 +69,14 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
       </Sheet>
     )
   }
+
+  const instagramUrl = plan.instagram_ref
+    ? normalizeSocialUrl(plan.instagram_ref, 'instagram')
+    : null
+  const tiktokUrl = plan.tiktok_url
+    ? normalizeSocialUrl(plan.tiktok_url, 'tiktok')
+    : null
+  const hasSocial = !!(instagramUrl || tiktokUrl)
 
   return (
     <div className="flex flex-col pb-safe">
@@ -199,12 +207,29 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
               {formatBudget(plan.budget_estimate)} estimated
             </DetailRow>
           )}
-          {plan.instagram_ref && (
-            <DetailRow icon={<Instagram size={14} />}>
-              <span className="text-warm-600">{plan.instagram_ref}</span>
-            </DetailRow>
-          )}
         </div>
+
+        {/* Social links */}
+        {hasSocial && (
+          <div className="flex flex-col gap-2">
+            {instagramUrl && (
+              <SocialChip
+                href={instagramUrl}
+                label="Instagram"
+                icon={<Instagram size={15} />}
+                className="bg-blush-100 text-blush-500 border-blush-200 hover:bg-blush-200"
+              />
+            )}
+            {tiktokUrl && (
+              <SocialChip
+                href={tiktokUrl}
+                label="TikTok"
+                icon={<TikTokIcon size={15} />}
+                className="bg-cream-100 text-warm-600 border-cream-300 hover:bg-cream-200"
+              />
+            )}
+          </div>
+        )}
 
         {/* Status actions */}
         <div className="flex flex-col gap-2">
@@ -246,11 +271,50 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
   )
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
 function DetailRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 text-sm text-warm-600">
       <span className="mt-0.5 text-warm-400 shrink-0">{icon}</span>
       <span>{children}</span>
     </div>
+  )
+}
+
+function SocialChip({
+  href,
+  label,
+  icon,
+  className,
+}: {
+  href: string
+  label: string
+  icon: React.ReactNode
+  className: string
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex items-center gap-2.5 rounded-2xl border px-4 py-3
+        transition-colors active:scale-[0.98] ${className}`}
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="text-sm font-medium">{label}</span>
+      <ExternalLink size={12} className="ml-auto opacity-50" />
+    </a>
+  )
+}
+
+function TikTokIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5
+        2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27
+        0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0
+        6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.78a4.85 4.85 0 0 1-1.01-.09z"/>
+    </svg>
   )
 }

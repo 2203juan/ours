@@ -15,6 +15,24 @@ export function generateCoupleCode(): string {
   return code
 }
 
+/**
+ * Normalize a pasted social media value into a full https:// URL.
+ * Handles: full URLs, bare domains, @usernames, bare usernames.
+ */
+export function normalizeSocialUrl(raw: string, platform: 'instagram' | 'tiktok'): string {
+  const s = raw.trim()
+  if (!s) return ''
+  if (s.startsWith('https://')) return s
+  if (s.startsWith('http://')) return s.replace('http://', 'https://')
+  // Strip leading @ to get the handle
+  const handle = s.startsWith('@') ? s.slice(1) : s
+  // Already has a domain component — just prepend protocol
+  if (handle.includes('.')) return 'https://' + handle
+  // Bare username — build canonical URL
+  if (platform === 'instagram') return `https://www.instagram.com/${handle}/`
+  return `https://www.tiktok.com/@${handle}`
+}
+
 /** Strip spaces/dashes and uppercase — normalizes raw user input into a code. */
 export function normalizeCode(raw: string): string {
   return raw.replace(/[\s\-]/g, '').toUpperCase()

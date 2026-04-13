@@ -10,6 +10,7 @@ import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
+import { normalizeSocialUrl } from '../../lib/utils'
 import type { Plan, Category, PlanPriority, PlanStatus, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
@@ -23,7 +24,8 @@ const schema = z.object({
   budget_estimate: z.string().optional(),
   location_text: z.string().max(120).optional(),
   maps_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
-  instagram_ref: z.string().max(60).optional(),
+  instagram_ref: z.string().max(200).optional(),
+  tiktok_url: z.string().max(200).optional(),
   is_someday: z.boolean(),
   ideal_date: z.string().optional(),
 })
@@ -70,6 +72,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       location_text: plan?.location_text ?? '',
       maps_url: plan?.maps_url ?? '',
       instagram_ref: plan?.instagram_ref ?? '',
+      tiktok_url: plan?.tiktok_url ?? '',
       is_someday: plan?.is_someday ?? true,
       ideal_date: plan?.ideal_date ?? '',
     },
@@ -88,7 +91,12 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         budget_estimate: values.budget_estimate ? parseFloat(values.budget_estimate) : null,
         location_text: values.location_text || null,
         maps_url: values.maps_url || null,
-        instagram_ref: values.instagram_ref || null,
+        instagram_ref: values.instagram_ref
+          ? normalizeSocialUrl(values.instagram_ref, 'instagram')
+          : null,
+        tiktok_url: values.tiktok_url
+          ? normalizeSocialUrl(values.tiktok_url, 'tiktok')
+          : null,
         is_someday: values.is_someday,
         ideal_date: !values.is_someday && values.ideal_date ? values.ideal_date : null,
         images,
@@ -101,7 +109,6 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         await createPlan.mutateAsync({
           ...payload,
           couple_id: session.coupleId,
-          // Always 'one' or 'two' — never null on new plans
           proposed_by: session.partnerKey ?? 'one',
         })
         toast.success('Plan added ✨')
@@ -252,10 +259,19 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       />
 
       <Input
-        label="Instagram reference"
-        placeholder="@username or post URL"
+        label="Instagram"
+        placeholder="@username or instagram.com/…"
+        inputMode="url"
         {...register('instagram_ref')}
         error={errors.instagram_ref?.message}
+      />
+
+      <Input
+        label="TikTok"
+        placeholder="@username or tiktok.com/…"
+        inputMode="url"
+        {...register('tiktok_url')}
+        error={errors.tiktok_url?.message}
       />
 
       <div className="flex flex-col gap-2">
