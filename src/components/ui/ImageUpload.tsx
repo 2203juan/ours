@@ -41,7 +41,7 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-warm-600 uppercase tracking-wide">Photos</label>
+      <label className="text-xs font-medium text-warm-500">Photos</label>
       <div className="flex flex-wrap gap-2">
         {value.map((url) => (
           <div key={url} className="relative h-20 w-20 rounded-2xl overflow-hidden border border-cream-300">
@@ -72,7 +72,7 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
           ) : (
             <>
               <Camera size={18} />
-              <span className="text-[10px] font-medium">Add</span>
+              <span className="text-[10px] font-medium leading-tight text-center">Add<br/>photo</span>
             </>
           )}
         </button>

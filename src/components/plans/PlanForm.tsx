@@ -151,7 +151,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 px-5 pb-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 px-5 pb-8">
 
       {/* ── Quick fields ── */}
       <Input
@@ -220,8 +220,8 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       </div>
 
       <Input
-        label="Google Maps link"
-        placeholder="https://maps.google.com/…"
+        label="Location"
+        placeholder="Paste a Google Maps link"
         type="url"
         inputMode="url"
         {...register('maps_url')}
@@ -254,7 +254,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <div className="flex flex-col gap-5 pb-1">
+          <div className="flex flex-col gap-6 pb-1">
 
             <Textarea
               label="Description"
@@ -264,9 +264,9 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
             />
 
             <Input
-              label="Estimated budget"
+              label="Approx budget"
               type="number"
-              placeholder="e.g. 50"
+              placeholder="e.g. 50000"
               min={0}
               step={1}
               {...register('budget_estimate')}
@@ -317,7 +317,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
                   <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow
                     transition-transform peer-checked:translate-x-4" />
                 </div>
-                <span className="text-sm text-warm-700 leading-snug">Someday — no specific date</span>
+                <span className="text-sm text-warm-700 leading-snug">No specific date</span>
               </label>
 
               {!isSomeday && (
@@ -340,7 +340,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         fullWidth
         loading={isSubmitting || createPlan.isPending || updatePlan.isPending}
       >
-        {isEditing ? 'Save changes' : 'Add plan'}
+        {isEditing ? 'Save changes' : 'Save plan'}
       </Button>
     </form>
   )
