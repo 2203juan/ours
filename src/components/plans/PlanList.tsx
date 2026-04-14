@@ -84,7 +84,7 @@ export function PlanList({
   }
 
   return (
-    <div>
+    <div className="pt-3 pb-32">
       {groups.map((g) => (
         <CategorySection
           key={g.category?.id ?? '__none'}
