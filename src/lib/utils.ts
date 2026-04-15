@@ -46,14 +46,19 @@ export function validateCodeFormat(code: string): string | null {
   return null
 }
 
-/** Format a currency amount with a fallback. */
+/** Format a COP budget amount with thousand separators. */
 export function formatBudget(amount: number | null | undefined): string {
   if (amount == null) return ''
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(amount)
+  return `COP ${amount.toLocaleString('en-US')}`
+}
+
+/** Returns true if a category name/emoji suggests it's food/restaurant related. */
+export function isFoodCategory(name: string, emoji: string): boolean {
+  const foodEmojis = ['🍽️', '🍕', '🍣', '🥂', '🍹', '🍸', '🍔', '🥗', '☕', '🍜', '🍱', '🥩', '🍷']
+  const foodKeywords = ['food', 'restaurant', 'cafe', 'bar', 'eat', 'drink', 'date', 'dinner', 'lunch', 'brunch']
+  if (foodEmojis.includes(emoji)) return true
+  const lower = name.toLowerCase()
+  return foodKeywords.some((kw) => lower.includes(kw))
 }
 
 /** Format a date string (YYYY-MM-DD) to a readable form. */

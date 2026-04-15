@@ -42,6 +42,8 @@ export interface Plan {
   maps_url: string | null
   instagram_ref: string | null
   tiktok_url: string | null
+  menu_url: string | null
+  completion_note: string | null
   ideal_date: string | null
   is_someday: boolean
   images: string[]
@@ -128,6 +130,7 @@ export interface CreatePlanPayload {
   maps_url?: string | null
   instagram_ref?: string | null
   tiktok_url?: string | null
+  menu_url?: string | null
   ideal_date?: string | null
   is_someday: boolean
   images: string[]
@@ -144,6 +147,8 @@ export interface UpdatePlanPayload {
   maps_url?: string | null
   instagram_ref?: string | null
   tiktok_url?: string | null
+  menu_url?: string | null
+  completion_note?: string | null
   ideal_date?: string | null
   is_someday?: boolean
   images?: string[]

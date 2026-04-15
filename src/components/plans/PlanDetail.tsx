@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Edit2, Trash2, MapPin, CalendarDays, DollarSign,
-  Instagram, ExternalLink, ChevronLeft, ChevronRight,
+  Instagram, ExternalLink, ChevronLeft, ChevronRight, Utensils,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Plan, Category, Session } from '../../types'
@@ -29,13 +29,35 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
 
+  // Done note prompt state
+  const [showDonePrompt, setShowDonePrompt] = useState(false)
+  const [doneNote, setDoneNote] = useState('')
+
   const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
 
-  const handleStatusChange = async (status: 'to_do' | 'done') => {
-    if (status === plan.status) return
+  const handleMarkDone = async () => {
     try {
-      await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload: { status } })
-      toast.success(status === 'done' ? '🎉 Marked as done!' : 'Moved back to To do')
+      await updatePlan.mutateAsync({
+        id: plan.id,
+        coupleId: session.coupleId,
+        payload: { status: 'done', completion_note: doneNote.trim() || null },
+      })
+      toast.success('🎉 Marked as done!')
+      setShowDonePrompt(false)
+      setDoneNote('')
+    } catch {
+      toast.error('Could not update status.')
+    }
+  }
+
+  const handleMoveToDo = async () => {
+    try {
+      await updatePlan.mutateAsync({
+        id: plan.id,
+        coupleId: session.coupleId,
+        payload: { status: 'to_do' },
+      })
+      toast.success('Moved back to To do')
     } catch {
       toast.error('Could not update status.')
     }
@@ -70,7 +92,7 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
   const tiktokUrl = plan.tiktok_url
     ? normalizeSocialUrl(plan.tiktok_url, 'tiktok')
     : null
-  const hasSocial = !!(instagramUrl || tiktokUrl)
+  const hasSocial = !!(instagramUrl || tiktokUrl || plan.menu_url)
 
   return (
     <div className="flex flex-col pb-safe">
@@ -203,9 +225,17 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
           )}
         </div>
 
-        {/* Social links */}
+        {/* Social + menu links */}
         {hasSocial && (
           <div className="flex flex-col gap-2">
+            {plan.menu_url && (
+              <SocialChip
+                href={plan.menu_url}
+                label="View menu"
+                icon={<Utensils size={15} />}
+                className="bg-sand-50 text-sand-600 border-sand-200 hover:bg-sand-100"
+              />
+            )}
             {instagramUrl && (
               <SocialChip
                 href={instagramUrl}
@@ -225,20 +255,63 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
           </div>
         )}
 
+        {/* Completion note — shown when done */}
+        {plan.status === 'done' && plan.completion_note && (
+          <div className="rounded-2xl bg-sage-100/60 border border-sage-200 px-4 py-3
+            flex flex-col gap-1 animate-fade-in">
+            <span className="text-[10px] font-semibold text-sage-500 uppercase tracking-wide">
+              Memory
+            </span>
+            <p className="text-sm text-sage-700 leading-relaxed">{plan.completion_note}</p>
+          </div>
+        )}
+
         {/* Status toggle */}
         {plan.status === 'to_do' ? (
-          <button
-            onClick={() => handleStatusChange('done')}
-            disabled={updatePlan.isPending}
-            className="w-full rounded-2xl bg-sage-300/40 text-sage-600 border border-sage-300
-              py-3.5 text-sm font-semibold hover:bg-sage-300/60 active:scale-[0.98]
-              transition-all"
-          >
-            ✓ Mark as done
-          </button>
+          showDonePrompt ? (
+            <div className="rounded-2xl bg-sage-100/60 border border-sage-200 p-4
+              flex flex-col gap-3 animate-fade-in">
+              <p className="text-sm font-medium text-sage-700">How was it? ✨</p>
+              <textarea
+                value={doneNote}
+                onChange={(e) => setDoneNote(e.target.value)}
+                placeholder="Leave a memory… (optional)"
+                rows={3}
+                className="w-full rounded-xl border border-sage-200 bg-white/70 px-3 py-2.5
+                  text-sm text-warm-700 placeholder:text-warm-300 resize-none
+                  focus:outline-none focus:ring-2 focus:ring-sage-300 focus:border-transparent"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleMarkDone}
+                  disabled={updatePlan.isPending}
+                  className="flex-1 rounded-xl bg-sage-400 text-white py-2.5 text-sm font-semibold
+                    hover:bg-sage-500 active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                  {updatePlan.isPending ? 'Saving…' : '✓ Save & mark done'}
+                </button>
+                <button
+                  onClick={() => { setShowDonePrompt(false); setDoneNote('') }}
+                  className="px-4 rounded-xl bg-cream-100 text-warm-600 text-sm
+                    hover:bg-cream-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDonePrompt(true)}
+              className="w-full rounded-2xl bg-sage-300/40 text-sage-600 border border-sage-300
+                py-3.5 text-sm font-semibold hover:bg-sage-300/60 active:scale-[0.98]
+                transition-all"
+            >
+              ✓ Mark as done
+            </button>
+          )
         ) : (
           <button
-            onClick={() => handleStatusChange('to_do')}
+            onClick={handleMoveToDo}
             disabled={updatePlan.isPending}
             className="w-full rounded-2xl bg-cream-100 text-warm-500 border border-cream-300
               py-3 text-sm font-medium hover:bg-cream-200 active:scale-[0.98]

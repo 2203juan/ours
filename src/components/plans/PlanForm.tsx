@@ -10,7 +10,7 @@ import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
-import { normalizeSocialUrl, cn } from '../../lib/utils'
+import { normalizeSocialUrl, isFoodCategory, cn } from '../../lib/utils'
 import type { Plan, Category, PlanPriority, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
@@ -20,9 +20,9 @@ const schema = z.object({
   category_id: z.string().optional(),
   description: z.string().max(500).optional(),
   priority: z.enum(['low', 'normal', 'high']),
-  budget_estimate: z.string().optional(),
   location_text: z.string().max(120).optional(),
   maps_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
+  menu_url: z.string().url('Must be a valid URL').or(z.literal('')).optional(),
   instagram_ref: z.string().max(200).optional(),
   tiktok_url: z.string().max(200).optional(),
   is_someday: z.boolean(),
@@ -53,6 +53,11 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   const [newCatName, setNewCatName] = useState('')
   const [newCatEmoji, setNewCatEmoji] = useState('✨')
 
+  // COP budget managed as local state outside RHF for live comma formatting
+  const [budgetDisplay, setBudgetDisplay] = useState<string>(
+    plan?.budget_estimate != null ? plan.budget_estimate.toLocaleString('en-US') : ''
+  )
+
   // Auto-expand details when editing a plan that has detail fields filled
   const [showDetails, setShowDetails] = useState(() => {
     if (!plan) return false
@@ -81,9 +86,9 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       category_id: plan?.category_id ?? '',
       description: plan?.description ?? '',
       priority: plan?.priority ?? 'normal',
-      budget_estimate: plan?.budget_estimate != null ? String(plan.budget_estimate) : '',
       location_text: plan?.location_text ?? '',
       maps_url: plan?.maps_url ?? '',
+      menu_url: plan?.menu_url ?? '',
       instagram_ref: plan?.instagram_ref ?? '',
       tiktok_url: plan?.tiktok_url ?? '',
       is_someday: plan?.is_someday ?? true,
@@ -92,17 +97,30 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   })
 
   const isSomeday = watch('is_someday')
+  const selectedCategoryId = watch('category_id')
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId)
+  const showMenuUrl = selectedCategory
+    ? isFoodCategory(selectedCategory.name, selectedCategory.emoji)
+    : false
+
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9]/g, '')
+    if (!raw) { setBudgetDisplay(''); return }
+    setBudgetDisplay(Number(raw).toLocaleString('en-US'))
+  }
 
   const onSubmit = async (values: FormValues) => {
     try {
+      const budgetRaw = budgetDisplay.replace(/[^0-9]/g, '')
       const payload = {
         name: values.name,
         category_id: values.category_id || null,
         description: values.description || null,
         priority: values.priority as PlanPriority,
-        budget_estimate: values.budget_estimate ? parseFloat(values.budget_estimate) : null,
+        budget_estimate: budgetRaw ? parseFloat(budgetRaw) : null,
         location_text: values.location_text || null,
         maps_url: values.maps_url || null,
+        menu_url: values.menu_url || null,
         instagram_ref: values.instagram_ref
           ? normalizeSocialUrl(values.instagram_ref, 'instagram')
           : null,
@@ -228,6 +246,18 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         error={errors.maps_url?.message}
       />
 
+      {/* Menu URL — only for food/restaurant categories */}
+      {showMenuUrl && (
+        <Input
+          label="Menu"
+          placeholder="Link to the menu"
+          type="url"
+          inputMode="url"
+          {...register('menu_url')}
+          error={errors.menu_url?.message}
+        />
+      )}
+
       {/* ── Details toggle ── */}
       <button
         type="button"
@@ -263,15 +293,27 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
               error={errors.description?.message}
             />
 
-            <Input
-              label="Approx budget"
-              type="number"
-              placeholder="e.g. 50000"
-              min={0}
-              step={1}
-              {...register('budget_estimate')}
-              error={errors.budget_estimate?.message}
-            />
+            {/* COP budget — controlled input with comma formatting */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-warm-500">Approx budget</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-400
+                  pointer-events-none select-none">
+                  COP
+                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={budgetDisplay}
+                  onChange={handleBudgetChange}
+                  placeholder="0"
+                  className="w-full rounded-2xl border border-cream-300 pl-12 pr-4 py-3 text-sm
+                    text-warm-800 placeholder:text-warm-300
+                    focus:outline-none focus:ring-2 focus:ring-sand-400 focus:border-transparent
+                    transition-shadow"
+                />
+              </div>
+            </div>
 
             <Input
               label="Zone/Neighborhood"
