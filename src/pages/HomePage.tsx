@@ -8,6 +8,7 @@ import { FilterBar } from '../components/plans/FilterBar'
 import { PlanList } from '../components/plans/PlanList'
 import { PlanDetail } from '../components/plans/PlanDetail'
 import { PlanForm } from '../components/plans/PlanForm'
+import { RecentActivity } from '../components/profile/RecentActivity'
 import { Sheet } from '../components/ui/Sheet'
 import { AvatarIcon } from '../components/ui/AvatarIcon'
 import { cn } from '../lib/utils'
@@ -25,7 +26,7 @@ export function HomePage() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const [view, setView] = useState<'to_do' | 'done'>('to_do')
+  const [view, setView] = useState<'to_do' | 'done' | 'activity'>('to_do')
   const [filters, setFilters] = useState<PlanFilters>(DEFAULT_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
@@ -48,7 +49,7 @@ export function HomePage() {
 
   const todoCount = plans.filter((p) => p.status === 'to_do').length
   const doneCount = plans.filter((p) => p.status === 'done').length
-  const viewPlans  = plans.filter((p) => p.status === view)
+  const viewPlans = plans.filter((p) => p.status === (view === 'activity' ? 'to_do' : view))
 
   return (
     <>
@@ -83,7 +84,7 @@ export function HomePage() {
 
           {/* View tabs */}
           <div className="flex mt-3 bg-cream-100 rounded-2xl p-1 gap-1">
-            {(['to_do', 'done'] as const).map((v) => (
+            {(['to_do', 'done', 'activity'] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -94,23 +95,29 @@ export function HomePage() {
                     : 'text-warm-400 hover:text-warm-600'
                 )}
               >
-                {v === 'to_do' ? 'To do' : 'Done'}
+                {v === 'to_do' ? 'To do' : v === 'done' ? 'Done' : 'Recent'}
               </button>
             ))}
           </div>
         </div>
       </header>
 
-      {/* ── Filters ── */}
-      <FilterBar
-        filters={filters}
-        onChange={setFilters}
-        categories={categories}
-        session={session}
-      />
+      {/* ── Filters (hidden on activity tab) ── */}
+      {view !== 'activity' && (
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          categories={categories}
+          session={session}
+        />
+      )}
 
-      {/* ── Plan list ── */}
-      {isLoading ? (
+      {/* ── Content ── */}
+      {view === 'activity' ? (
+        <div className="px-4 pt-4 pb-32">
+          <RecentActivity onPlanTap={(planId) => setSelectedPlanId(planId)} />
+        </div>
+      ) : isLoading ? (
         <div className="flex justify-center py-16">
           <div className="h-8 w-8 border-2 border-sand-300 border-t-sand-500 rounded-full animate-spin" />
         </div>

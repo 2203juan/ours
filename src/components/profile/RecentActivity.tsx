@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Sparkles } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
 import { useSessionStore } from '../../stores/sessionStore'
@@ -17,11 +16,17 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function ActivityRow({ activity, onTap }: { activity: Activity; onTap: (id: string | null) => void }) {
+function ActivityRow({
+  activity,
+  onTap,
+}: {
+  activity: Activity
+  onTap: (id: string) => void
+}) {
   const tappable = !!activity.plan_id
   return (
     <button
-      onClick={() => onTap(activity.plan_id)}
+      onClick={() => tappable && onTap(activity.plan_id!)}
       disabled={!tappable}
       className="flex items-center gap-3 rounded-2xl border border-cream-200 bg-white
         px-4 py-3 text-left w-full transition-colors
@@ -48,32 +53,32 @@ function ActivityRow({ activity, onTap }: { activity: Activity; onTap: (id: stri
   )
 }
 
-export function RecentActivity() {
+interface RecentActivityProps {
+  onPlanTap: (planId: string) => void
+}
+
+export function RecentActivity({ onPlanTap }: RecentActivityProps) {
   const session = useSessionStore((s) => s.session)!
   const { data: activities = [], isLoading } = useActivities(session.coupleId)
-  const navigate = useNavigate()
-
-  const handleTap = (planId: string | null) => {
-    if (!planId) return
-    navigate('/', { state: { openPlanId: planId } })
-  }
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-medium text-warm-400 uppercase tracking-wide">Recent activity</p>
-
       {isLoading ? (
         <div className="rounded-2xl border border-cream-200 bg-cream-50 px-4 py-5">
           <div className="h-4 w-32 bg-cream-200 rounded animate-pulse" />
         </div>
       ) : activities.length === 0 ? (
-        <div className="rounded-2xl border border-cream-200 bg-cream-50 px-4 py-5 text-center">
-          <p className="text-sm text-warm-400">No recent activity yet</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
+            <Sparkles size={22} className="text-warm-300" />
+          </div>
+          <p className="text-warm-600 font-medium mb-1">No recent activity yet</p>
+          <p className="text-sm text-warm-400">Plans you add will appear here.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-1.5">
           {activities.map((a) => (
-            <ActivityRow key={a.id} activity={a} onTap={handleTap} />
+            <ActivityRow key={a.id} activity={a} onTap={onPlanTap} />
           ))}
         </div>
       )}

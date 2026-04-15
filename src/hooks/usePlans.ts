@@ -114,6 +114,7 @@ export function useDeletePlan() {
     },
     onSuccess: (coupleId) => {
       qc.invalidateQueries({ queryKey: [QUERY_KEY, coupleId] })
+      qc.invalidateQueries({ queryKey: [ACTIVITIES_KEY, coupleId] })
     },
   })
 }
