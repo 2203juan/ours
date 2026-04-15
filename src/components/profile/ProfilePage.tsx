@@ -3,6 +3,7 @@ import { Copy, Check, LogOut, Heart, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useSessionStore } from '../../stores/sessionStore'
 import { AvatarIcon } from '../ui/AvatarIcon'
+import { RecentActivity } from './RecentActivity'
 import type { PartnerKey } from '../../types'
 
 export function ProfilePage() {
@@ -140,6 +141,9 @@ export function ProfilePage() {
           Switching profile changes who appears as proposer on new plans.
         </p>
       </div>
+
+      {/* Recent activity */}
+      <RecentActivity />
 
       {/* Sign out */}
       <div className="pt-4 border-t border-cream-200">

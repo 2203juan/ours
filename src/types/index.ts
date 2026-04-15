@@ -170,6 +170,23 @@ export const DEFAULT_CATEGORIES: Array<{ name: string; emoji: string; sort_order
 ]
 
 // =====================================================
+// Activity feed
+// =====================================================
+
+export type ActivityType = 'plan_created'
+
+export interface Activity {
+  id: string
+  couple_id: string
+  type: ActivityType
+  actor_name: string
+  /** null when the referenced plan has been deleted */
+  plan_id: string | null
+  plan_name: string
+  created_at: string
+}
+
+// =====================================================
 // Status / priority label maps
 // =====================================================
 

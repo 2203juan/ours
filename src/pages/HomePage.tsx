@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Heart } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { usePlans } from '../hooks/usePlans'
 import { useCategories } from '../hooks/useCategories'
 import { useSessionStore } from '../stores/sessionStore'
@@ -21,11 +22,24 @@ export function HomePage() {
   const session = useSessionStore((s) => s.session)!
   const { data: plans = [], isLoading } = usePlans(session.coupleId)
   const { data: categories = [] } = useCategories(session.coupleId)
+  const location = useLocation()
+  const navigate = useNavigate()
 
   const [view, setView] = useState<'to_do' | 'done'>('to_do')
   const [filters, setFilters] = useState<PlanFilters>(DEFAULT_FILTERS)
   const [addOpen, setAddOpen] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+
+  // Open plan detail when navigated here with state.openPlanId (from activity feed)
+  useEffect(() => {
+    const state = location.state as { openPlanId?: string } | null
+    if (state?.openPlanId) {
+      setSelectedPlanId(state.openPlanId)
+      // Clear the state so re-visiting this route doesn't re-open the sheet
+      navigate('/', { replace: true, state: null })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key])
 
   // Always use the live plan from the query so detail updates after mutations
   const selectedPlan = selectedPlanId

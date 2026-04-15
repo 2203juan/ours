@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../lib/supabase'
 import type { Plan, PlanFilters, CreatePlanPayload, UpdatePlanPayload, PartnerKey } from '../types'
+import { ACTIVITIES_KEY } from './useActivities'
 
 const QUERY_KEY = 'plans'
 
@@ -41,17 +42,30 @@ export function filterPlans(plans: Plan[], filters: PlanFilters): Plan[] {
 export function useCreatePlan() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: CreatePlanPayload) => {
+    mutationFn: async ({ actorName, ...payload }: CreatePlanPayload & { actorName?: string }) => {
       const { data, error } = await supabase
         .from('plans')
         .insert(payload)
         .select(`*, category:categories(*)`)
         .single()
       if (error) throw error
+
+      // Fire-and-forget: create activity record (non-fatal if it fails)
+      if (actorName) {
+        supabase.from('activities').insert({
+          couple_id: payload.couple_id,
+          type: 'plan_created',
+          actor_name: actorName,
+          plan_id: (data as Plan).id,
+          plan_name: payload.name,
+        }).then()
+      }
+
       return data as Plan
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: [QUERY_KEY, data.couple_id] })
+      qc.invalidateQueries({ queryKey: [ACTIVITIES_KEY, data.couple_id] })
     },
   })
 }

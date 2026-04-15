@@ -136,10 +136,12 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload })
         toast.success('Plan updated')
       } else {
+        const effectiveKey = session.partnerKey ?? 'one'
         await createPlan.mutateAsync({
           ...payload,
           couple_id: session.coupleId,
-          proposed_by: session.partnerKey ?? 'one',
+          proposed_by: effectiveKey,
+          actorName: effectiveKey === 'one' ? session.partnerOneName : session.partnerTwoName,
         })
         toast.success('Plan added ✨')
       }
