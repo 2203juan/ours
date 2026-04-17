@@ -29,9 +29,9 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
 
-  // Done note prompt state
+  // Done note prompt state — pre-fill with existing note so re-marking done is easy to edit
   const [showDonePrompt, setShowDonePrompt] = useState(false)
-  const [doneNote, setDoneNote] = useState('')
+  const [doneNote, setDoneNote] = useState(plan.completion_note ?? '')
 
   const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
 
@@ -259,15 +259,25 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
           </div>
         )}
 
-        {/* Completion note — shown when done */}
-        {plan.status === 'done' && plan.completion_note && (
-          <div className="rounded-2xl bg-sage-100/60 border border-sage-200 px-4 py-3
-            flex flex-col gap-1 animate-fade-in">
-            <span className="text-[10px] font-semibold text-sage-500 uppercase tracking-wide">
-              Memory
-            </span>
-            <NoteContent text={plan.completion_note} />
-          </div>
+        {/* Completion note */}
+        {plan.completion_note && (
+          plan.status === 'done' ? (
+            <div className="rounded-2xl bg-sage-100/60 border border-sage-200 px-4 py-3
+              flex flex-col gap-1 animate-fade-in">
+              <span className="text-[10px] font-semibold text-sage-500 uppercase tracking-wide">
+                Memory
+              </span>
+              <NoteContent text={plan.completion_note} className="text-sage-700" />
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-cream-100/80 border border-cream-300 px-4 py-3
+              flex flex-col gap-1">
+              <span className="text-[10px] font-semibold text-warm-400 uppercase tracking-wide">
+                Previous note
+              </span>
+              <NoteContent text={plan.completion_note} className="text-warm-500" />
+            </div>
+          )
         )}
 
         {/* Status toggle */}
@@ -349,7 +359,7 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
 
 const BULLET_RE = /^[-*•]\s+(.*)/
 
-function NoteContent({ text }: { text: string }) {
+function NoteContent({ text, className = 'text-sage-700' }: { text: string; className?: string }) {
   const lines = text.split('\n')
   const nodes: React.ReactNode[] = []
 
@@ -386,7 +396,7 @@ function NoteContent({ text }: { text: string }) {
   flushBullets('end')
 
   return (
-    <div className="text-sm text-sage-700 leading-relaxed flex flex-col gap-1">
+    <div className={`text-sm leading-relaxed flex flex-col gap-1 ${className}`}>
       {nodes}
     </div>
   )
