@@ -91,10 +91,21 @@ export function useUpdatePlan() {
         .select(`*, category:categories(*)`)
         .single()
       if (error) throw error
+
+      // Fire-and-forget: keep activity plan_name in sync when the plan is renamed
+      if (payload.name) {
+        supabase
+          .from('activities')
+          .update({ plan_name: payload.name })
+          .eq('plan_id', id)
+          .then()
+      }
+
       return { plan: data as Plan, coupleId }
     },
     onSuccess: ({ coupleId }) => {
       qc.invalidateQueries({ queryKey: [QUERY_KEY, coupleId] })
+      qc.invalidateQueries({ queryKey: [ACTIVITIES_KEY, coupleId] })
     },
   })
 }

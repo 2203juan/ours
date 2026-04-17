@@ -19,11 +19,12 @@ interface PlanDetailProps {
   categories: Category[]
   session: Session
   onClose: () => void
+  onMarkedDone?: () => void
   onMovedToDo?: () => void
 }
 
 
-export function PlanDetail({ plan, categories, session, onClose, onMovedToDo }: PlanDetailProps) {
+export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, onMovedToDo }: PlanDetailProps) {
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
   const [editing, setEditing] = useState(false)
@@ -43,9 +44,8 @@ export function PlanDetail({ plan, categories, session, onClose, onMovedToDo }: 
         coupleId: session.coupleId,
         payload: { status: 'done', completion_note: doneNote.trim() || null },
       })
-      toast.success('🎉 Marked as done!')
-      setShowDonePrompt(false)
-      setDoneNote('')
+      toast.success('🎉 Marked as done!');
+      (onMarkedDone ?? onClose)()
     } catch {
       toast.error('Could not update status.')
     }
