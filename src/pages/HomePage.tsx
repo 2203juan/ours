@@ -138,7 +138,7 @@ export function HomePage() {
       {view === 'to_do' && (
         <button
           onClick={() => setAddOpen(true)}
-          className="fixed bottom-20 right-5 z-30 h-14 w-14 rounded-full bg-warm-800 text-white
+          className="fixed bottom-safe-20 right-5 z-30 h-14 w-14 rounded-full bg-warm-800 text-white
             shadow-card flex items-center justify-center hover:bg-warm-700 active:scale-95
             transition-all"
           aria-label="Add plan"

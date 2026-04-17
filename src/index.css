@@ -41,6 +41,9 @@
   .pb-safe-20 {
     padding-bottom: max(80px, calc(80px + env(safe-area-inset-bottom, 0px)));
   }
+  .bottom-safe-20 {
+    bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
 
   /* Hide scrollbar while keeping scroll */
   .no-scrollbar::-webkit-scrollbar {
