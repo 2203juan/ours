@@ -266,7 +266,7 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
             <span className="text-[10px] font-semibold text-sage-500 uppercase tracking-wide">
               Memory
             </span>
-            <p className="text-sm text-sage-700 leading-relaxed">{plan.completion_note}</p>
+            <NoteContent text={plan.completion_note} />
           </div>
         )}
 
@@ -279,8 +279,8 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
               <textarea
                 value={doneNote}
                 onChange={(e) => setDoneNote(e.target.value)}
-                placeholder="Leave a memory… (optional)"
-                rows={3}
+                placeholder={"Leave a memory… (optional)\n\n• Burrata pizza\n• Truffle fries"}
+                rows={4}
                 className="w-full rounded-xl border border-sage-200 bg-white/70 px-3 py-2.5
                   text-sm text-warm-700 placeholder:text-warm-300 resize-none
                   focus:outline-none focus:ring-2 focus:ring-sage-300 focus:border-transparent"
@@ -346,6 +346,51 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+const BULLET_RE = /^[-*•]\s+(.*)/
+
+function NoteContent({ text }: { text: string }) {
+  const lines = text.split('\n')
+  const nodes: React.ReactNode[] = []
+
+  let bulletGroup: string[] = []
+
+  const flushBullets = (key: string) => {
+    if (!bulletGroup.length) return
+    nodes.push(
+      <ul key={key} className="flex flex-col gap-0.5 pl-1">
+        {bulletGroup.map((item, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <span className="mt-[5px] h-1.5 w-1.5 rounded-full bg-sage-400 shrink-0" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    )
+    bulletGroup = []
+  }
+
+  lines.forEach((line, i) => {
+    const bullet = line.match(BULLET_RE)
+    if (bullet) {
+      bulletGroup.push(bullet[1])
+    } else {
+      flushBullets(`b-${i}`)
+      if (line.trim() === '') {
+        nodes.push(<div key={i} className="h-1.5" />)
+      } else {
+        nodes.push(<p key={i}>{line}</p>)
+      }
+    }
+  })
+  flushBullets('end')
+
+  return (
+    <div className="text-sm text-sage-700 leading-relaxed flex flex-col gap-1">
+      {nodes}
+    </div>
+  )
+}
 
 function DetailRow({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
