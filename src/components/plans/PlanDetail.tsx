@@ -19,10 +19,11 @@ interface PlanDetailProps {
   categories: Category[]
   session: Session
   onClose: () => void
+  onMovedToDo?: () => void
 }
 
 
-export function PlanDetail({ plan, categories, session, onClose }: PlanDetailProps) {
+export function PlanDetail({ plan, categories, session, onClose, onMovedToDo }: PlanDetailProps) {
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
   const [editing, setEditing] = useState(false)
@@ -57,7 +58,8 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
         coupleId: session.coupleId,
         payload: { status: 'to_do' },
       })
-      toast.success('Moved back to To do')
+      toast.success('Moved back to To do');
+      (onMovedToDo ?? onClose)()
     } catch {
       toast.error('Could not update status.')
     }
@@ -305,7 +307,7 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
                   {updatePlan.isPending ? 'Saving…' : '✓ Save & mark done'}
                 </button>
                 <button
-                  onClick={() => { setShowDonePrompt(false); setDoneNote('') }}
+                  onClick={() => { setShowDonePrompt(false); setDoneNote(plan.completion_note ?? '') }}
                   className="px-4 rounded-xl bg-cream-100 text-warm-600 text-sm
                     hover:bg-cream-200 transition-colors"
                 >

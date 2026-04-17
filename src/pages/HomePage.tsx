@@ -164,6 +164,7 @@ export function HomePage() {
             categories={categories}
             session={session}
             onClose={() => setSelectedPlanId(null)}
+            onMovedToDo={() => { setSelectedPlanId(null); setView('to_do') }}
           />
         </Sheet>
       )}
