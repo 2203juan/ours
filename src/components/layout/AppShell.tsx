@@ -9,7 +9,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex flex-col h-dvh overflow-hidden bg-cream-50">
       {/* Main content — padded for bottom nav */}
-      <main className="flex-1 pb-20 overflow-y-auto">
+      <main className="flex-1 pb-safe-20 overflow-y-auto">
         {children}
       </main>
       <BottomNav />

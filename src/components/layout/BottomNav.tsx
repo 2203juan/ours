@@ -10,8 +10,8 @@ const NAV = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-sm border-t border-cream-200">
-      <div className="flex justify-around items-center h-14 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-sm border-t border-cream-200 pb-safe">
+      <div className="flex justify-around items-center h-14">
         {NAV.map(({ to, icon: Icon, label, end }) => (
           <NavLink
             key={to}
