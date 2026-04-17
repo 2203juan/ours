@@ -1,7 +1,7 @@
 import { ChevronRight, Sparkles } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
 import { useSessionStore } from '../../stores/sessionStore'
-import type { Activity } from '../../types'
+import type { Activity, Plan } from '../../types'
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -18,9 +18,11 @@ function timeAgo(dateStr: string): string {
 
 function ActivityRow({
   activity,
+  planName,
   onTap,
 }: {
   activity: Activity
+  planName: string
   onTap: (id: string) => void
 }) {
   const tappable = !!activity.plan_id
@@ -39,7 +41,7 @@ function ActivityRow({
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-warm-800 truncate leading-snug">
-          {activity.plan_name}
+          {planName}
         </p>
         <p className="text-xs text-warm-400 mt-0.5">
           Added by {activity.actor_name} · {timeAgo(activity.created_at)}
@@ -55,11 +57,16 @@ function ActivityRow({
 
 interface RecentActivityProps {
   onPlanTap: (planId: string) => void
+  /** Live plans array — used as source of truth for current plan names */
+  plans: Plan[]
 }
 
-export function RecentActivity({ onPlanTap }: RecentActivityProps) {
+export function RecentActivity({ onPlanTap, plans }: RecentActivityProps) {
   const session = useSessionStore((s) => s.session)!
   const { data: activities = [], isLoading } = useActivities(session.coupleId)
+
+  // Build a quick lookup map from the live plans cache
+  const planNameById = new Map(plans.map((p) => [p.id, p.name]))
 
   return (
     <div className="flex flex-col gap-2">
@@ -78,7 +85,13 @@ export function RecentActivity({ onPlanTap }: RecentActivityProps) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {activities.map((a) => (
-            <ActivityRow key={a.id} activity={a} onTap={onPlanTap} />
+            <ActivityRow
+              key={a.id}
+              activity={a}
+              // Live name from plans cache; fall back to stored snapshot if plan not in cache
+              planName={a.plan_id ? (planNameById.get(a.plan_id) ?? a.plan_name) : a.plan_name}
+              onTap={onPlanTap}
+            />
           ))}
         </div>
       )}

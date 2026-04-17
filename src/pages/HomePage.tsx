@@ -115,7 +115,7 @@ export function HomePage() {
       {/* ── Content ── */}
       {view === 'activity' ? (
         <div className="px-4 pt-4 pb-32">
-          <RecentActivity onPlanTap={(planId) => setSelectedPlanId(planId)} />
+          <RecentActivity onPlanTap={(planId) => setSelectedPlanId(planId)} plans={plans} />
         </div>
       ) : isLoading ? (
         <div className="flex justify-center py-16">
