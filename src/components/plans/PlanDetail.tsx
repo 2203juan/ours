@@ -191,23 +191,27 @@ export function PlanDetail({ plan, categories, session, onClose }: PlanDetailPro
 
         {/* Details */}
         <div className="flex flex-col gap-2">
-          {plan.location_text && (
-            <DetailRow icon={<MapPin size={14} />}>
-              {plan.maps_url ? (
-                <a
-                  href={plan.maps_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sand-500 underline underline-offset-2"
-                >
-                  {plan.location_text}
-                  <ExternalLink size={11} />
-                </a>
-              ) : (
-                <span>{plan.location_text}</span>
-              )}
-            </DetailRow>
-          )}
+          {(() => {
+            const locationLabel = plan.location_text || (plan.maps_url ? 'Location' : null)
+            if (!locationLabel) return null
+            return (
+              <DetailRow icon={<MapPin size={14} />}>
+                {plan.maps_url ? (
+                  <a
+                    href={plan.maps_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sand-500 underline underline-offset-2"
+                  >
+                    {locationLabel}
+                    <ExternalLink size={11} />
+                  </a>
+                ) : (
+                  <span>{locationLabel}</span>
+                )}
+              </DetailRow>
+            )
+          })()}
           {!plan.is_someday && plan.ideal_date && (
             <DetailRow icon={<CalendarDays size={14} />}>
               {formatDate(plan.ideal_date)}

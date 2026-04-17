@@ -35,12 +35,19 @@ export function PlanItem({ plan, session, onClick }: PlanItemProps) {
         </div>
 
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {plan.location_text && (
-            <span className="flex items-center gap-0.5 text-[11px] text-warm-400">
-              <MapPin size={9} />
-              {truncate(plan.location_text, 20)}
-            </span>
-          )}
+          {(() => {
+            const locationLabel = plan.location_text || (plan.maps_url ? 'Location' : null)
+            return locationLabel ? (
+              <span className="flex items-center gap-0.5 text-[11px] text-warm-400">
+                <MapPin size={9} />
+                {truncate(locationLabel, 20)}
+              </span>
+            ) : plan.description ? (
+              <span className="text-[11px] text-warm-300 truncate">
+                {truncate(plan.description, 30)}
+              </span>
+            ) : null
+          })()}
           {!plan.is_someday && plan.ideal_date && (
             <span className="flex items-center gap-0.5 text-[11px] text-warm-400">
               <CalendarDays size={9} />
@@ -51,11 +58,6 @@ export function PlanItem({ plan, session, onClick }: PlanItemProps) {
             <span className="flex items-center gap-0.5 text-[11px] text-warm-400">
               <DollarSign size={9} />
               {formatBudget(plan.budget_estimate)}
-            </span>
-          )}
-          {plan.description && !plan.location_text && (
-            <span className="text-[11px] text-warm-300 truncate">
-              {truncate(plan.description, 30)}
             </span>
           )}
         </div>
