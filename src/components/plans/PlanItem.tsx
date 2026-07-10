@@ -2,6 +2,7 @@ import type { Plan, Session } from '../../types'
 import { getPartnerName, getPartnerAvatar } from '../../types'
 import { AvatarIcon } from '../ui/AvatarIcon'
 import { PriorityBadge } from '../ui/Badge'
+import { StarRatingDisplay } from '../ui/StarRating'
 import { cn, truncate, formatBudget, formatDate } from '../../lib/utils'
 import { MapPin, CalendarDays, DollarSign } from 'lucide-react'
 import { isValidProposer } from '../../hooks/usePlans'
@@ -48,6 +49,9 @@ export function PlanItem({ plan, session, onClick }: PlanItemProps) {
               </span>
             ) : null
           })()}
+          {plan.maps_url && plan.maps_rating != null && (
+            <StarRatingDisplay rating={plan.maps_rating} />
+          )}
           {!plan.is_someday && plan.ideal_date && (
             <span className="flex items-center gap-0.5 text-[11px] text-warm-400">
               <CalendarDays size={9} />

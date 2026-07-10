@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { Plus, ChevronDown } from 'lucide-react'
+import { Plus, ChevronDown, Star } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import { Select } from '../ui/Select'
@@ -58,6 +58,22 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     plan?.budget_estimate != null ? plan.budget_estimate.toLocaleString('en-US') : ''
   )
 
+  // Google Maps rating managed as local state (free-form decimal input, e.g. "4.6")
+  const [ratingDisplay, setRatingDisplay] = useState<string>(
+    plan?.maps_rating != null ? String(plan.maps_rating) : ''
+  )
+
+  const handleRatingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value.replace(/[^0-9.]/g, '')
+    const [intPart, ...rest] = raw.split('.')
+    if (rest.length > 0) raw = `${intPart}.${rest.join('').slice(0, 1)}`
+    if (raw !== '' && raw !== '.') {
+      const num = parseFloat(raw)
+      if (!isNaN(num) && num > 5) raw = '5'
+    }
+    setRatingDisplay(raw)
+  }
+
   // Auto-expand details when editing a plan that has detail fields filled
   const [showDetails, setShowDetails] = useState(() => {
     if (!plan) return false
@@ -97,6 +113,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   })
 
   const isSomeday = watch('is_someday')
+  const mapsUrl = watch('maps_url')
   const selectedCategoryId = watch('category_id')
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId)
   const showMenuUrl = selectedCategory
@@ -112,6 +129,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   const onSubmit = async (values: FormValues) => {
     try {
       const budgetRaw = budgetDisplay.replace(/[^0-9]/g, '')
+      const ratingNum = ratingDisplay ? parseFloat(ratingDisplay) : null
       const payload = {
         name: values.name,
         category_id: values.category_id || null,
@@ -120,6 +138,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         budget_estimate: budgetRaw ? parseFloat(budgetRaw) : null,
         location_text: values.location_text || null,
         maps_url: values.maps_url || null,
+        maps_rating: values.maps_url && ratingNum != null && !isNaN(ratingNum) ? ratingNum : null,
         menu_url: values.menu_url || null,
         instagram_ref: values.instagram_ref
           ? normalizeSocialUrl(values.instagram_ref, 'instagram')
@@ -247,6 +266,26 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
         {...register('maps_url')}
         error={errors.maps_url?.message}
       />
+
+      {mapsUrl && (
+        <div className="flex flex-col gap-1 -mt-3">
+          <label className="text-xs font-medium text-warm-500">Google Maps rating</label>
+          <div className="relative w-28">
+            <Star size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400 fill-amber-400" />
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="0–5"
+              value={ratingDisplay}
+              onChange={handleRatingChange}
+              className="w-full rounded-2xl border border-cream-300 pl-9 pr-3 py-2.5 text-sm
+                text-warm-800 placeholder:text-warm-300
+                focus:outline-none focus:ring-2 focus:ring-sand-400 focus:border-transparent
+                transition-shadow"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Menu URL — only for food/restaurant categories */}
       {showMenuUrl && (

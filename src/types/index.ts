@@ -40,6 +40,8 @@ export interface Plan {
   budget_estimate: number | null
   location_text: string | null
   maps_url: string | null
+  /** Google Maps rating (0-5), entered manually alongside the maps_url */
+  maps_rating: number | null
   instagram_ref: string | null
   tiktok_url: string | null
   menu_url: string | null
@@ -128,6 +130,7 @@ export interface CreatePlanPayload {
   budget_estimate?: number | null
   location_text?: string | null
   maps_url?: string | null
+  maps_rating?: number | null
   instagram_ref?: string | null
   tiktok_url?: string | null
   menu_url?: string | null
@@ -145,6 +148,7 @@ export interface UpdatePlanPayload {
   budget_estimate?: number | null
   location_text?: string | null
   maps_url?: string | null
+  maps_rating?: number | null
   instagram_ref?: string | null
   tiktok_url?: string | null
   menu_url?: string | null

@@ -9,6 +9,7 @@ import { getPartnerName, getPartnerAvatar } from '../../types'
 import { useUpdatePlan, useDeletePlan, isValidProposer } from '../../hooks/usePlans'
 import { AvatarIcon } from '../ui/AvatarIcon'
 import { StatusBadge, PriorityBadge } from '../ui/Badge'
+import { StarRatingDisplay } from '../ui/StarRating'
 import { Button } from '../ui/Button'
 import { Sheet } from '../ui/Sheet'
 import { PlanForm } from './PlanForm'
@@ -198,19 +199,24 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
             if (!locationLabel) return null
             return (
               <DetailRow icon={<MapPin size={14} />}>
-                {plan.maps_url ? (
-                  <a
-                    href={plan.maps_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sand-500 underline underline-offset-2"
-                  >
-                    {locationLabel}
-                    <ExternalLink size={11} />
-                  </a>
-                ) : (
-                  <span>{locationLabel}</span>
-                )}
+                <span className="flex items-center gap-2 flex-wrap">
+                  {plan.maps_url ? (
+                    <a
+                      href={plan.maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sand-500 underline underline-offset-2"
+                    >
+                      {locationLabel}
+                      <ExternalLink size={11} />
+                    </a>
+                  ) : (
+                    <span>{locationLabel}</span>
+                  )}
+                  {plan.maps_url && plan.maps_rating != null && (
+                    <StarRatingDisplay rating={plan.maps_rating} size={12} className="text-warm-500" />
+                  )}
+                </span>
               </DetailRow>
             )
           })()}
