@@ -1,25 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Heart } from 'lucide-react'
+import { Plus, Heart, SlidersHorizontal } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
-import { usePlans, useUpdatePlan, useCreatePlan } from '../hooks/usePlans'
+import { usePlans, useUpdatePlan } from '../hooks/usePlans'
 import { useCategories } from '../hooks/useCategories'
 import { useUnseenActivity } from '../hooks/useUnseenActivity'
 import { useSessionStore } from '../stores/sessionStore'
-import { FilterBar } from '../components/plans/FilterBar'
+import { FilterPanel, ActiveFilterChips, countActiveFilters } from '../components/plans/FilterBar'
 import { PlanList } from '../components/plans/PlanList'
 import { MemoriesList } from '../components/plans/MemoriesList'
 import { UpcomingSection } from '../components/plans/UpcomingSection'
 import { PlanListSkeleton } from '../components/plans/PlanListSkeleton'
 import { PlanDetail } from '../components/plans/PlanDetail'
-import { PlanForm, type PlanFormSeed } from '../components/plans/PlanForm'
-import { QuickAdd } from '../components/plans/QuickAdd'
+import { PlanForm } from '../components/plans/PlanForm'
 import { RecentActivity } from '../components/profile/RecentActivity'
 import { Sheet } from '../components/ui/Sheet'
 import { ErrorState } from '../components/ui/ErrorState'
 import { AvatarIcon } from '../components/ui/AvatarIcon'
 import { notify } from '../lib/toast'
 import { cn } from '../lib/utils'
-import { linkFieldFor, type DetectedLink } from '../lib/links'
 import { DEFAULT_FILTERS, getMyName } from '../types'
 import type { Plan, PlanFilters, PlanStatus } from '../types'
 
@@ -37,7 +35,6 @@ export function HomePage() {
   const { data: plans = [], isLoading, isError, isFetching, refetch } = usePlans(session.coupleId)
   const { data: categories = [] } = useCategories(session.coupleId)
   const updatePlan = useUpdatePlan()
-  const createPlan = useCreatePlan()
   const { unseen, markSeen } = useUnseenActivity(session.coupleId, getMyName(session))
 
   // `view` and the open plan live in the URL so the hardware/gesture back
@@ -48,8 +45,8 @@ export function HomePage() {
   const selectedPlanId = searchParams.get('plan')
 
   const [filters, setFilters] = useState<PlanFilters>(DEFAULT_FILTERS)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [addSeed, setAddSeed] = useState<PlanFormSeed | undefined>()
   const [addDirty, setAddDirty] = useState(false)
 
   const setView = useCallback(
@@ -108,6 +105,7 @@ export function HomePage() {
     if (view === 'activity' && unseen > 0) markSeen()
   }, [view, unseen, markSeen])
 
+  const activeFilterCount = countActiveFilters(filters)
   const todoCount = plans.filter((p) => p.status === 'to_do').length
   const doneCount = plans.filter((p) => p.status === 'done').length
   const viewPlans = plans.filter((p) => p.status === (view === 'activity' ? 'to_do' : view))
@@ -144,36 +142,11 @@ export function HomePage() {
       .catch(() => notify.error('Could not save that.'))
   }
 
-  /** Quick add — name only, inheriting the category filter when one is set. */
-  const handleQuickCreate = async (name: string) => {
-    const partnerKey = session.partnerKey ?? 'one'
-    await createPlan.mutateAsync({
-      couple_id: session.coupleId,
-      category_id: filters.categoryId === 'all' ? null : filters.categoryId,
-      proposed_by: partnerKey,
-      actorName: partnerKey === 'one' ? session.partnerOneName : session.partnerTwoName,
-      name,
-      priority: 'normal',
-      is_someday: true,
-      images: [],
-    })
-  }
-
-  const openAddSheet = (seed?: PlanFormSeed) => {
-    setAddSeed(seed)
-    setAddOpen(true)
-  }
-
-  const handlePastedLink = (link: DetectedLink) => {
-    const seed: PlanFormSeed = { [linkFieldFor(link.kind)]: link.url }
-    if (link.suggestedName) seed.name = link.suggestedName
-    openAddSheet(seed)
-  }
+  const openAddSheet = () => setAddOpen(true)
 
   const closeAddSheet = () => {
     setAddOpen(false)
     setAddDirty(false)
-    setAddSeed(undefined)
   }
 
   return (
@@ -193,19 +166,42 @@ export function HomePage() {
                 </p>
               )}
             </div>
-            <div className="flex -space-x-2">
-              <AvatarIcon
-                name={session.partnerOneName}
-                avatarKey={session.partnerOneAvatar}
-                size="sm"
-                className="ring-2 ring-white"
-              />
-              <AvatarIcon
-                name={session.partnerTwoName}
-                avatarKey={session.partnerTwoAvatar}
-                size="sm"
-                className="ring-2 ring-white"
-              />
+            <div className="flex items-center gap-1 shrink-0">
+              {view !== 'activity' && !isError && (
+                <button
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  aria-expanded={filtersOpen}
+                  aria-label={filtersOpen ? 'Hide search and filters' : 'Search and filter'}
+                  className={cn(
+                    'relative h-11 w-11 rounded-2xl flex items-center justify-center transition-colors',
+                    filtersOpen
+                      ? 'bg-cream-200 text-warm-700'
+                      : 'text-warm-400 hover:bg-cream-100 hover:text-warm-600'
+                  )}
+                >
+                  <SlidersHorizontal size={17} />
+                  {/* Filters can hide most of the list; never let that be silent */}
+                  {activeFilterCount > 0 && !filtersOpen && (
+                    <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-sand-500
+                      ring-2 ring-white" />
+                  )}
+                </button>
+              )}
+
+              <div className="flex -space-x-2">
+                <AvatarIcon
+                  name={session.partnerOneName}
+                  avatarKey={session.partnerOneAvatar}
+                  size="sm"
+                  className="ring-2 ring-white"
+                />
+                <AvatarIcon
+                  name={session.partnerTwoName}
+                  avatarKey={session.partnerTwoAvatar}
+                  size="sm"
+                  className="ring-2 ring-white"
+                />
+              </div>
             </div>
           </div>
 
@@ -239,14 +235,28 @@ export function HomePage() {
         </div>
       </header>
 
-      {/* ── Filters (hidden on activity tab and while erroring) ── */}
+      {/* ── Filters: on demand, with a permanent trace only when active ── */}
       {view !== 'activity' && !isError && (
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          categories={categories}
-          session={session}
-        />
+        <>
+          {filtersOpen && (
+            <FilterPanel
+              filters={filters}
+              onChange={setFilters}
+              categories={categories}
+              session={session}
+              // Memories groups by month and ignores sort, so hide a dead control
+              showSort={view !== 'done'}
+            />
+          )}
+          {!filtersOpen && (
+            <ActiveFilterChips
+              filters={filters}
+              onChange={setFilters}
+              categories={categories}
+              session={session}
+            />
+          )}
+        </>
       )}
 
       {/* ── Content ── */}
@@ -270,12 +280,9 @@ export function HomePage() {
       ) : (
         <>
           <UpcomingSection plans={viewPlans} onPlanClick={(p) => openPlan(p.id)} />
-          <QuickAdd onCreate={handleQuickCreate} onPastedLink={handlePastedLink} />
           <PlanList
             plans={viewPlans}
             allPlansCount={plans.length}
-            view={view}
-            categories={categories}
             filters={filters}
             session={session}
             onPlanClick={(p) => openPlan(p.id)}
@@ -312,7 +319,6 @@ export function HomePage() {
         <PlanForm
           session={session}
           categories={categories}
-          seed={addSeed}
           onDone={closeAddSheet}
           onDirtyChange={setAddDirty}
         />

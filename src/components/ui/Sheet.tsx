@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { cn } from '../../lib/utils'
+import { cn, blurActiveField } from '../../lib/utils'
 import { X } from 'lucide-react'
 
 /**
@@ -73,6 +73,8 @@ export function Sheet({
 
   // Every close path funnels through here so the confirm step can't be bypassed
   const requestClose = () => {
+    // Unmounting a focused field leaves iOS stuck at its zoomed-in scale
+    blurActiveField()
     if (confirmClose) setAskConfirm(true)
     else onClose()
   }

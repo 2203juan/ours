@@ -135,6 +135,18 @@ export function truncate(text: string, maxLen: number): string {
   return text.slice(0, maxLen - 1) + '…'
 }
 
+/**
+ * Drop focus from whatever field currently has it.
+ *
+ * Call before unmounting a focused input on iOS: if the field disappears from
+ * the DOM while focused, Safari leaves the page stuck at the zoom level it
+ * animated to, with no way back short of reloading.
+ */
+export function blurActiveField() {
+  const el = document.activeElement
+  if (el instanceof HTMLElement) el.blur()
+}
+
 /** Get initials from a name. */
 export function initials(name: string): string {
   return name

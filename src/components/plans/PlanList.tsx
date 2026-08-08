@@ -1,13 +1,11 @@
-import type { Plan, Category, PlanFilters, Session } from '../../types'
+import type { Plan, PlanFilters, Session } from '../../types'
 import { filterPlans, sortPlans } from '../../hooks/usePlans'
-import { CategorySection } from './CategorySection'
-import { ClipboardList, CheckCheck, SearchX } from 'lucide-react'
+import { PlanItem } from './PlanItem'
+import { ClipboardList, SearchX } from 'lucide-react'
 
 interface PlanListProps {
-  plans: Plan[]         // already filtered by view (to_do | done)
+  plans: Plan[]         // already filtered by view (to_do)
   allPlansCount: number // total across both views, for empty state copy
-  view: 'to_do' | 'done'
-  categories: Category[]
   filters: PlanFilters
   session: Session
   onPlanClick: (plan: Plan) => void
@@ -17,11 +15,16 @@ interface PlanListProps {
   onClearFilters: () => void
 }
 
+/**
+ * A flat list, deliberately. Grouping by category only pays off when the
+ * groups are balanced — here almost everything lands in one category, so the
+ * accordion produced one huge section plus a few near-empty ones and spent
+ * ~50px of header on each without helping anyone find anything. The category
+ * now travels with the row instead.
+ */
 export function PlanList({
   plans,
   allPlansCount,
-  view,
-  categories,
   filters,
   session,
   onPlanClick,
@@ -30,102 +33,97 @@ export function PlanList({
   onAddClick,
   onClearFilters,
 }: PlanListProps) {
-  const filtered = sortPlans(filterPlans(plans, filters), filters.sort)
+  const visible = sortPlans(filterPlans(plans, filters), filters.sort)
 
-  const groups: Array<{ category: Category | null; plans: Plan[] }> = []
-
-  for (const cat of categories) {
-    const catPlans = filtered.filter((p) => p.category_id === cat.id)
-    if (catPlans.length) groups.push({ category: cat, plans: catPlans })
-  }
-
-  const uncategorized = filtered.filter(
-    (p) => !p.category_id || !categories.find((c) => c.id === p.category_id)
-  )
-  if (uncategorized.length) groups.push({ category: null, plans: uncategorized })
-
-  if (!filtered.length) {
+  if (!visible.length) {
     // A search that found nothing is its own state — never imply the list is empty
     if (filters.search.trim()) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-          <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
-            <SearchX size={22} className="text-warm-300" />
-          </div>
-          <p className="text-warm-600 font-medium mb-1">
-            No matches for “{filters.search.trim()}”
-          </p>
-          <p className="text-sm text-warm-400 mb-6">
-            Try another word, or search in the {view === 'to_do' ? 'Done' : 'To do'} tab.
-          </p>
-          <button
-            onClick={onClearFilters}
-            className="text-sm font-medium text-sand-500 underline underline-offset-2"
-          >
-            Clear search & filters
-          </button>
-        </div>
+        <EmptyState
+          icon={<SearchX size={22} className="text-warm-300" />}
+          title={`No matches for “${filters.search.trim()}”`}
+          body="Try another word, or look in the Done tab."
+          action={{ label: 'Clear search & filters', onClick: onClearFilters }}
+        />
       )
     }
 
-    if (view === 'done') {
+    if (allPlansCount === 0) {
       return (
-        <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-          <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
-            <CheckCheck size={22} className="text-warm-300" />
-          </div>
-          <p className="text-warm-600 font-medium mb-1">Nothing done yet</p>
-          <p className="text-sm text-warm-400">Completed plans will appear here.</p>
-        </div>
+        <EmptyState
+          icon={<ClipboardList size={22} className="text-warm-300" />}
+          title="No plans yet"
+          body="Add the first thing you want to do together."
+          action={{ label: 'Add your first plan →', onClick: onAddClick }}
+        />
       )
     }
 
-    // to_do view
+    if (plans.length === 0) {
+      return (
+        <EmptyState
+          icon={<ClipboardList size={22} className="text-warm-300" />}
+          title="All done! ✨"
+          body="Everything is marked as done. Add something new."
+        />
+      )
+    }
+
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-        <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
-          <ClipboardList size={22} className="text-warm-300" />
-        </div>
-        {allPlansCount === 0 ? (
-          <>
-            <p className="text-warm-600 font-medium mb-1">No plans yet</p>
-            <p className="text-sm text-warm-400 mb-6">Start adding things you want to do together.</p>
-            <button
-              onClick={onAddClick}
-              className="text-sm font-medium text-sand-500 underline underline-offset-2"
-            >
-              Add your first plan →
-            </button>
-          </>
-        ) : plans.length === 0 ? (
-          <>
-            <p className="text-warm-600 font-medium mb-1">All done! ✨</p>
-            <p className="text-sm text-warm-400">Everything is marked as done. Add something new.</p>
-          </>
-        ) : (
-          <>
-            <p className="text-warm-600 font-medium mb-1">No plans match your filters</p>
-            <p className="text-sm text-warm-400">Try clearing some filters.</p>
-          </>
-        )}
-      </div>
+      <EmptyState
+        icon={<SearchX size={22} className="text-warm-300" />}
+        title="No plans match your filters"
+        body="Try removing one of them."
+        action={{ label: 'Clear filters', onClick: onClearFilters }}
+      />
     )
   }
 
   return (
-    <div className="pt-3 pb-32">
-      {groups.map((g) => (
-        <CategorySection
-          key={g.category?.id ?? '__none'}
-          category={g.category}
-          plans={g.plans}
-          defaultOpen={true}
+    <div className="mx-4 mt-3 mb-32 rounded-3xl bg-white border border-cream-200
+      overflow-hidden shadow-soft">
+      {visible.map((plan) => (
+        <PlanItem
+          key={plan.id}
+          plan={plan}
           session={session}
-          onPlanClick={onPlanClick}
+          onClick={onPlanClick}
           onToggleStatus={onToggleStatus}
           onToggleHeart={onToggleHeart}
         />
       ))}
+    </div>
+  )
+}
+
+// ── Empty state ──────────────────────────────────────────────────────────────
+
+function EmptyState({
+  icon,
+  title,
+  body,
+  action,
+}: {
+  icon: React.ReactNode
+  title: string
+  body: string
+  action?: { label: string; onClick: () => void }
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+      <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
+        {icon}
+      </div>
+      <p className="text-warm-600 font-medium mb-1">{title}</p>
+      <p className="text-sm text-warm-400">{body}</p>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="mt-6 text-sm font-medium text-sand-500 underline underline-offset-2"
+        >
+          {action.label}
+        </button>
+      )}
     </div>
   )
 }

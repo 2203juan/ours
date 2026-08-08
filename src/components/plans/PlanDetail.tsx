@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  Edit2, Trash2, MapPin, CalendarDays, DollarSign,
+  Edit2, Trash2, MapPin, CalendarDays, DollarSign, NotebookPen,
   Instagram, ExternalLink, ChevronLeft, ChevronRight, Utensils,
 } from 'lucide-react'
 import type { Plan, Category, Session } from '../../types'
@@ -13,7 +13,7 @@ import { HeartButton } from '../ui/HeartButton'
 import { Button } from '../ui/Button'
 import { Sheet } from '../ui/Sheet'
 import { PlanForm } from './PlanForm'
-import { formatBudget, formatDate, normalizeSocialUrl } from '../../lib/utils'
+import { formatBudget, formatDate, normalizeSocialUrl, blurActiveField } from '../../lib/utils'
 import { notify } from '../../lib/toast'
 
 interface PlanDetailProps {
@@ -39,11 +39,13 @@ export function PlanDetail({
 
   // Done note prompt state — pre-fill with existing note so re-marking done is easy to edit
   const [showDonePrompt, setShowDonePrompt] = useState(false)
+  const [editingNote, setEditingNote] = useState(false)
   const [doneNote, setDoneNote] = useState(plan.completion_note ?? '')
 
   const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
 
   const handleMarkDone = async () => {
+    blurActiveField()
     try {
       await updatePlan.mutateAsync({
         id: plan.id,
@@ -54,6 +56,22 @@ export function PlanDetail({
       (onMarkedDone ?? onClose)()
     } catch {
       notify.error('Could not update status.')
+    }
+  }
+
+  /** Saves only the note — status and completed_at stay untouched. */
+  const handleSaveNote = async () => {
+    blurActiveField()
+    try {
+      await updatePlan.mutateAsync({
+        id: plan.id,
+        coupleId: session.coupleId,
+        payload: { completion_note: doneNote.trim() || null },
+      })
+      setEditingNote(false)
+      notify.success('Memory saved')
+    } catch {
+      notify.error('Could not save the memory.')
     }
   }
 
@@ -305,17 +323,81 @@ export function PlanDetail({
           </div>
         )}
 
-        {/* Completion note */}
-        {plan.completion_note && (
-          plan.status === 'done' ? (
+        {/* Completion note.
+            On a done plan it's editable in place: the memory is usually
+            written later than the moment you tick the box, and until now the
+            only way back to it was to move the plan to To do and re-complete
+            it, which rewrote completed_at and lost its place in Memories. */}
+        {plan.status === 'done' ? (
+          editingNote ? (
+            <div className="rounded-2xl bg-sage-100/60 border border-sage-200 p-4
+              flex flex-col gap-3 animate-fade-in">
+              <label
+                htmlFor="memory-note"
+                className="text-sm font-medium text-sage-700"
+              >
+                How was it? ✨
+              </label>
+              <textarea
+                id="memory-note"
+                value={doneNote}
+                onChange={(e) => setDoneNote(e.target.value)}
+                placeholder={"Leave a memory… (optional)\n\n• Burrata pizza\n• Truffle fries"}
+                rows={4}
+                autoFocus
+                className="w-full rounded-xl border border-sage-200 bg-white/70 px-3 py-2.5
+                  text-sm text-warm-700 placeholder:text-warm-300 resize-none
+                  focus:outline-none focus:ring-2 focus:ring-sage-300 focus:border-transparent"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveNote}
+                  disabled={updatePlan.isPending}
+                  className="flex-1 rounded-xl bg-sage-500 text-white py-2.5 text-sm font-semibold
+                    hover:bg-sage-600 active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                  {updatePlan.isPending ? 'Saving…' : 'Save memory'}
+                </button>
+                <button
+                  onClick={() => { blurActiveField(); setEditingNote(false); setDoneNote(plan.completion_note ?? '') }}
+                  className="px-4 rounded-xl bg-cream-100 text-warm-600 text-sm
+                    hover:bg-cream-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : plan.completion_note ? (
             <div className="rounded-2xl bg-sage-100/60 border border-sage-200 px-4 py-3
               flex flex-col gap-1 animate-fade-in">
-              <span className="text-[10px] font-semibold text-sage-500 uppercase tracking-wide">
-                Memory
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold text-sage-500 uppercase tracking-wide">
+                  Memory
+                </span>
+                <button
+                  onClick={() => setEditingNote(true)}
+                  aria-label="Edit this memory"
+                  className="-mr-2 -my-1 h-11 w-11 rounded-full flex items-center justify-center
+                    text-sage-500 hover:bg-sage-200/60 transition-colors"
+                >
+                  <Edit2 size={13} />
+                </button>
+              </div>
               <NoteContent text={plan.completion_note} className="text-sage-700" />
             </div>
           ) : (
+            <button
+              onClick={() => setEditingNote(true)}
+              className="rounded-2xl border border-dashed border-sage-300 px-4 py-3
+                flex items-center justify-center gap-2 text-sm font-medium text-sage-600
+                hover:bg-sage-100/60 active:scale-[0.99] transition-all"
+            >
+              <NotebookPen size={14} />
+              Add a memory
+            </button>
+          )
+        ) : (
+          plan.completion_note && (
             <div className="rounded-2xl bg-cream-100/80 border border-cream-300 px-4 py-3
               flex flex-col gap-1">
               <span className="text-[10px] font-semibold text-warm-400 uppercase tracking-wide">
@@ -351,7 +433,7 @@ export function PlanDetail({
                   {updatePlan.isPending ? 'Saving…' : '✓ Save & mark done'}
                 </button>
                 <button
-                  onClick={() => { setShowDonePrompt(false); setDoneNote(plan.completion_note ?? '') }}
+                  onClick={() => { blurActiveField(); setShowDonePrompt(false); setDoneNote(plan.completion_note ?? '') }}
                   className="px-4 rounded-xl bg-cream-100 text-warm-600 text-sm
                     hover:bg-cream-200 transition-colors"
                 >

@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, ChevronDown, Star } from 'lucide-react'
+import { Plus, ChevronDown, Star, ClipboardPaste } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
-import { normalizeSocialUrl, isFoodCategory, formatBudgetDigits, cn } from '../../lib/utils'
+import { normalizeSocialUrl, isFoodCategory, formatBudgetDigits, blurActiveField, cn } from '../../lib/utils'
 import { notify } from '../../lib/toast'
+import { readClipboardLink, linkFieldFor, LINK_LABEL } from '../../lib/links'
 import { PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../../lib/supabase'
 import type { Plan, Category, PlanPriority, Session } from '../../types'
 
@@ -34,17 +35,10 @@ type FormValues = z.infer<typeof schema>
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-/** Prefilled fields for a new plan, e.g. from a pasted link. */
-export type PlanFormSeed = Partial<
-  Pick<FormValues, 'name' | 'maps_url' | 'instagram_ref' | 'tiktok_url' | 'description'>
->
-
 interface PlanFormProps {
   session: Session
   categories: Category[]
   plan?: Plan
-  /** Ignored when editing an existing plan. */
-  seed?: PlanFormSeed
   onDone: () => void
   /** Reports unsaved-changes state so the parent Sheet can confirm before closing. */
   onDirtyChange?: (dirty: boolean) => void
@@ -53,7 +47,7 @@ interface PlanFormProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PlanForm({
-  session, categories, plan, seed, onDone, onDirtyChange,
+  session, categories, plan, onDone, onDirtyChange,
 }: PlanFormProps) {
   const isEditing = !!plan
   const createPlan = useCreatePlan()
@@ -86,14 +80,12 @@ export function PlanForm({
     setRatingDisplay(raw)
   }
 
-  // Auto-expand details when editing a plan that has detail fields filled,
-  // or when a seeded link landed in a field that lives inside the collapse.
+  // Auto-expand details when editing a plan that has detail fields filled.
+  // Pasting a link into a collapsed field opens it too — see handlePasteLink.
   const [showDetails, setShowDetails] = useState(() => {
-    if (seed?.instagram_ref || seed?.tiktok_url || seed?.description) return true
     if (!plan) return false
     return !!(
       plan.description ||
-      plan.budget_estimate != null ||
       plan.location_text ||
       plan.instagram_ref ||
       plan.tiktok_url ||
@@ -108,19 +100,20 @@ export function PlanForm({
     handleSubmit,
     watch,
     setValue,
+    getValues,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: plan?.name ?? seed?.name ?? '',
+      name: plan?.name ?? '',
       category_id: plan?.category_id ?? '',
-      description: plan?.description ?? seed?.description ?? '',
+      description: plan?.description ?? '',
       priority: plan?.priority ?? 'normal',
       location_text: plan?.location_text ?? '',
-      maps_url: plan?.maps_url ?? seed?.maps_url ?? '',
+      maps_url: plan?.maps_url ?? '',
       menu_url: plan?.menu_url ?? '',
-      instagram_ref: plan?.instagram_ref ?? seed?.instagram_ref ?? '',
-      tiktok_url: plan?.tiktok_url ?? seed?.tiktok_url ?? '',
+      instagram_ref: plan?.instagram_ref ?? '',
+      tiktok_url: plan?.tiktok_url ?? '',
       is_someday: plan?.is_someday ?? true,
       ideal_date: plan?.ideal_date ?? '',
     },
@@ -174,6 +167,7 @@ export function PlanForm({
   }, [])
 
   const onSubmit = async (values: FormValues) => {
+    blurActiveField()
     try {
       const budgetRaw = budgetDisplay.replace(/[^0-9]/g, '')
       const ratingNum = ratingDisplay ? parseFloat(ratingDisplay) : null
@@ -220,6 +214,29 @@ export function PlanForm({
     }
   }
 
+  /**
+   * Reads a link from the clipboard and drops it in the field it belongs to.
+   * Must run straight off the tap: Safari only permits `readText()` from a
+   * user gesture, and shows its own Paste confirmation first.
+   */
+  const handlePasteLink = async () => {
+    const link = await readClipboardLink()
+    if (!link) {
+      notify.info('No link found in your clipboard')
+      return
+    }
+    const field = linkFieldFor(link.kind)
+    setValue(field, link.url, { shouldDirty: true })
+    // Only fill the name if the user hasn't written one
+    if (link.suggestedName && !getValues('name').trim()) {
+      setValue('name', link.suggestedName, { shouldDirty: true })
+    }
+    // instagram/tiktok/description live inside the collapse — open it, or the
+    // paste would look like it did nothing
+    if (field !== 'maps_url') setShowDetails(true)
+    notify.success(`Added the ${LINK_LABEL[link.kind]}`)
+  }
+
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return
     try {
@@ -240,6 +257,21 @@ export function PlanForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 px-5 pb-8">
+
+      {/* Paste a link — the usual way a plan starts is a Maps or Instagram
+          link someone copied. Creating only; editing has the fields already. */}
+      {!isEditing && (
+        <button
+          type="button"
+          onClick={handlePasteLink}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-dashed
+            border-cream-300 py-3 text-sm font-medium text-warm-500
+            hover:border-sand-400 hover:text-sand-600 active:scale-[0.99] transition-all"
+        >
+          <ClipboardPaste size={15} />
+          Start from a copied link
+        </button>
+      )}
 
       {/* ── Quick fields ── */}
       <Input
@@ -305,6 +337,30 @@ export function PlanForm({
             </button>
           </div>
         )}
+      </div>
+
+      {/* COP budget — promoted out of "more details" on purpose. Hidden away it
+          was rarely filled, so "cheap" got encoded as a category instead, which
+          then competed with the category that says what the plan actually is. */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-warm-500">Approx budget</label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-400
+            pointer-events-none select-none">
+            COP
+          </span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={budgetDisplay}
+            onChange={handleBudgetChange}
+            placeholder="0"
+            className="w-full rounded-2xl border border-cream-300 pl-12 pr-4 py-3 text-sm
+              text-warm-800 placeholder:text-warm-300
+              focus:outline-none focus:ring-2 focus:ring-sand-400 focus:border-transparent
+              transition-shadow"
+          />
+        </div>
       </div>
 
       <Input
@@ -382,28 +438,6 @@ export function PlanForm({
               {...register('description')}
               error={errors.description?.message}
             />
-
-            {/* COP budget — controlled input with comma formatting */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-warm-500">Approx budget</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-400
-                  pointer-events-none select-none">
-                  COP
-                </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={budgetDisplay}
-                  onChange={handleBudgetChange}
-                  placeholder="0"
-                  className="w-full rounded-2xl border border-cream-300 pl-12 pr-4 py-3 text-sm
-                    text-warm-800 placeholder:text-warm-300
-                    focus:outline-none focus:ring-2 focus:ring-sand-400 focus:border-transparent
-                    transition-shadow"
-                />
-              </div>
-            </div>
 
             <Input
               label="Zone/Neighborhood"

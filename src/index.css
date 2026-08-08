@@ -210,14 +210,20 @@
 
 /* ── Prevent iOS Safari auto-zoom on input focus ─────────────────────────── */
 /*
- * iOS WebKit zooms in when a focused input has font-size < 16px.
- * This rule enforces a 16px floor on all text-entry elements.
- * Written outside @layer so it wins over Tailwind utilities (text-sm = 14px)
- * without needing !important. Visually imperceptible on desktop (+2px).
+ * iOS WebKit zooms in when a focused field has font-size < 16px, and in a
+ * standalone PWA it often never zooms back out. This enforces a 16px floor.
+ *
+ * Specificity matters more than source order here. Being outside @layer only
+ * breaks ties — it can't beat a *more specific* selector. `.text-sm` is
+ * (0,1,0), so the `input:not(…):not(…):not(…)` branch at (0,3,1) wins, but
+ * bare `textarea` and `select` at (0,0,1) lost, and those fields kept zooming.
+ * The `:not([hidden])` qualifier lifts them to (0,1,1) — above any single
+ * class — without resorting to !important. Hidden fields can't be focused, so
+ * excluding them costs nothing.
  */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
-textarea,
-select {
+textarea:not([hidden]),
+select:not([hidden]) {
   font-size: max(1rem, 1em);
 }
 

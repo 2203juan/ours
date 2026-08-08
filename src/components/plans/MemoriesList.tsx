@@ -1,4 +1,4 @@
-import { CheckCheck, SearchX, Quote } from 'lucide-react'
+import { CheckCheck, SearchX, Quote, NotebookPen } from 'lucide-react'
 import type { Plan, Category, PlanFilters, Session } from '../../types'
 import { completionDate, getPartnerAvatar, getPartnerName } from '../../types'
 import { filterPlans, isValidProposer } from '../../hooks/usePlans'
@@ -157,13 +157,21 @@ function MemoryCard({
           <span className="shrink-0 text-[11px] text-warm-400 mt-1.5 tabular-nums">{day}</span>
         </div>
 
-        {plan.completion_note && (
+        {plan.completion_note ? (
           <div className="flex gap-2 rounded-2xl bg-sage-100 border border-sage-200 px-3 py-2.5">
             <Quote size={12} className="shrink-0 mt-1 text-sage-500" />
             <p className="text-sm text-sage-700 leading-relaxed whitespace-pre-line line-clamp-3">
               {plan.completion_note}
             </p>
           </div>
+        ) : (
+          // The memory is the point of this view, so say so when it's missing
+          // rather than leaving a silently emptier card.
+          <span className="flex items-center gap-1.5 rounded-2xl border border-dashed
+            border-cream-300 px-3 py-2 text-xs text-warm-400">
+            <NotebookPen size={12} className="shrink-0" />
+            Add a memory
+          </span>
         )}
 
         <div className="flex items-center gap-2 flex-wrap text-[11px] text-warm-400">

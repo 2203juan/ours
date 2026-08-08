@@ -23,16 +23,14 @@ export default defineConfig({
         display: 'standalone',
         theme_color: '#F8F3EC',
         background_color: '#F8F3EC',
+        // No `maskable` entry: that contract promises a 40% safe zone, and the
+        // artwork runs edge to edge — Android's circular mask would slice off
+        // the calendar and the sparkle. Without it the icon gets a plain
+        // backing plate instead, which leaves the art intact.
         icons: [
           { src: 'icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
           { src: 'icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-          {
-            src: 'icons/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
         ],
       },
       workbox: {

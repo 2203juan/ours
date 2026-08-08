@@ -86,6 +86,17 @@ export function sortPlans(plans: Plan[], sort: PlanSort): Plan[] {
   const out = [...plans]
 
   switch (sort) {
+    case 'category':
+      // Clusters the list by category without spending a header row on each
+      // group — the emoji column in PlanItem is what labels the clusters.
+      return out.sort((a, b) => {
+        const [ao, bo] = [a.category?.sort_order, b.category?.sort_order]
+        if (ao == null && bo == null) return byNewest(a, b)
+        if (ao == null) return 1
+        if (bo == null) return -1
+        return ao - bo || byNewest(a, b)
+      })
+
     case 'priority':
       return out.sort(
         (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || byNewest(a, b)

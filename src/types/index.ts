@@ -126,7 +126,7 @@ export function getPartnerAvatar(session: Session, key: 'one' | 'two'): AvatarKe
 // Filter state
 // =====================================================
 
-export type PlanSort = 'recent' | 'priority' | 'wanted' | 'date' | 'budget' | 'rating'
+export type PlanSort = 'recent' | 'category' | 'priority' | 'wanted' | 'date' | 'budget' | 'rating'
 
 export interface PlanFilters {
   categoryId: string | 'all'
@@ -149,6 +149,7 @@ export const DEFAULT_FILTERS: PlanFilters = {
 /** Kept short — these render at 16px inside a three-column row on small phones. */
 export const SORT_LABELS: Record<PlanSort, string> = {
   recent: 'Newest',
+  category: 'Category',
   priority: 'Priority',
   wanted: 'Wanted',
   date: 'Date',

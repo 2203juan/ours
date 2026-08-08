@@ -56,8 +56,20 @@ export function PlanItem({
       {/* Tapping the body opens the detail sheet */}
       <button
         onClick={() => onClick(plan)}
-        className="flex-1 min-w-0 flex items-center gap-3 text-left active:opacity-70 transition-opacity"
+        className="flex-1 min-w-0 flex items-center gap-2.5 text-left active:opacity-70 transition-opacity"
       >
+        {/* Category, in a fixed column so the eye can scan straight down it.
+            Buried in the metadata row it was invisible; here the plans that
+            aren't the usual category stand out without any extra height.
+            The slot keeps its width when empty so the titles stay aligned. */}
+        <span
+          className="shrink-0 w-5 text-center text-[15px] leading-none"
+          title={plan.category?.name}
+          aria-label={plan.category ? `Category: ${plan.category.name}` : 'No category'}
+        >
+          {plan.category?.emoji ?? ''}
+        </span>
+
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
