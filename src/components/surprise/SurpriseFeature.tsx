@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Shuffle, RefreshCw } from 'lucide-react'
-import toast from 'react-hot-toast'
 import type { Plan, Category, Session } from '../../types'
 import { getPartnerName, getPartnerAvatar } from '../../types'
 import { pickRandom, cn } from '../../lib/utils'
+import { notify } from '../../lib/toast'
 import { isValidProposer } from '../../hooks/usePlans'
 import { AvatarIcon } from '../ui/AvatarIcon'
 import { Button } from '../ui/Button'
@@ -28,7 +28,7 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
   const spin = () => {
     const picked = pickRandom(todoPlans)
     if (!picked) {
-      toast("No plans in that category 🍂", { icon: '🌿' })
+      notify.info('No plans in that category 🍂')
       return
     }
     setSpinning(true)
@@ -78,7 +78,7 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
         disabled={todoPlans.length === 0}
         className={cn(
           'mx-auto h-28 w-28 rounded-full flex flex-col items-center justify-center gap-2',
-          'bg-gradient-to-br from-sand-400 to-blush-300 text-white shadow-card',
+          'bg-gradient-to-br from-sand-400 to-blush-300 text-pure-white shadow-card',
           'transition-transform active:scale-95 hover:scale-105',
           'disabled:opacity-40 disabled:pointer-events-none',
           spinning && 'animate-spin-slow'
@@ -139,7 +139,7 @@ export function SurpriseFeature({ plans, categories, session }: SurpriseFeatureP
                 variant="primary"
                 size="md"
                 onClick={() => {
-                  toast.success("Let's go! 🌟")
+                  notify.success("Let's go! 🌟")
                   setResult(null)
                 }}
                 className="flex-1"

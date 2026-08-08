@@ -10,9 +10,20 @@
     <meta name="apple-mobile-web-app-title" content="Juan & Isa" />
     <meta name="theme-color" content="#F8F3EC" />
     <meta name="description" content="Your shared bucket list, together." />
-    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%icons/apple-touch-icon.png" />
-    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <!--
+      Paths are relative on purpose. With %BASE_URL% the dev server expanded it
+      to the base and then prefixed the base again, producing /ours/ours/… —
+      which doesn't 404, it quietly returns the SPA fallback HTML, so iOS got a
+      web page where it expected a PNG and fell back to a screenshot of the app.
+      Relative resolves correctly against the base in both dev and build.
+
+      The ?v= is a cache buster: iOS keeps home-screen icons keyed by URL and
+      won't pick up new bytes at the same path, even if you delete the app and
+      add it again. Bump it whenever the icon changes.
+    -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=2" />
+    <!-- The manifest link is injected by vite-plugin-pwa (see vite.config.ts) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

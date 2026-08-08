@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Heart, ArrowRight, Copy, Check, RefreshCw } from 'lucide-react'
-import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { generateCoupleCode, normalizeCode, validateCodeFormat } from '../../lib/utils'
+import { notify } from '../../lib/toast'
 import { DEFAULT_CATEGORIES, type AvatarKey } from '../../types'
 import { useSessionStore } from '../../stores/sessionStore'
 import { Button } from '../ui/Button'
@@ -153,7 +153,7 @@ export function OnboardingFlow() {
       setCreatedCouple(partial)
       setStep('create-who-are-you')
     } catch (e) {
-      toast.error('Could not create couple. Check your Supabase config.')
+      notify.error('Could not create couple. Check your Supabase config.')
       console.error(e)
     } finally {
       setLoading(false)
@@ -184,11 +184,11 @@ export function OnboardingFlow() {
         .single()
 
       if (error || !data) {
-        toast.error('Code not found. Double-check with your partner.')
+        notify.error('Code not found. Double-check with your partner.')
         return
       }
       if (!data.partner_one_name || !data.partner_two_name) {
-        toast.error('This couple was created with an older version. Please create a new couple.')
+        notify.error('This couple was created with an older version. Please create a new couple.')
         return
       }
 
@@ -204,7 +204,7 @@ export function OnboardingFlow() {
       })
       setStep('join-who-are-you')
     } catch (e) {
-      toast.error('Something went wrong.')
+      notify.error('Something went wrong.')
       console.error(e)
     } finally {
       setLoading(false)
@@ -228,7 +228,7 @@ export function OnboardingFlow() {
         {/* ── Logo ── */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center h-14 w-14 rounded-full bg-gradient-to-br from-sand-300 to-blush-300 mb-4">
-            <Heart size={24} className="text-white fill-white" />
+            <Heart size={24} className="text-pure-white fill-pure-white" />
           </div>
           <h1 className="font-serif text-4xl text-warm-800">Ours</h1>
           <p className="mt-1 text-sm text-warm-400 font-light">your plans, together</p>

@@ -28,7 +28,7 @@ export function IdentitySelector() {
         <div className="text-center">
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-full
             bg-gradient-to-br from-sand-300 to-blush-300 mb-4">
-            <Heart size={20} className="text-white fill-white" />
+            <Heart size={20} className="text-pure-white fill-pure-white" />
           </div>
           <p className="text-xs text-warm-400 font-medium uppercase tracking-widest mb-1">
             {session.coupleName}

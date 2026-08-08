@@ -50,20 +50,11 @@ export default function App() {
       <HashRouter>
         <AppRoutes />
       </HashRouter>
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: '#2A1F18',
-            color: '#F7F2EB',
-            fontSize: '14px',
-            borderRadius: '16px',
-            padding: '10px 16px',
-          },
-          success: { iconTheme: { primary: '#5E9073', secondary: '#F7F2EB' } },
-          error: { iconTheme: { primary: '#D98080', secondary: '#F7F2EB' } },
-        }}
-      />
+      {/*
+        Appearance and timing live in lib/toast.tsx — every toast is rendered
+        there as a custom toast, so per-type options here would have no effect.
+      */}
+      <Toaster position="top-center" />
     </QueryClientProvider>
   )
 }

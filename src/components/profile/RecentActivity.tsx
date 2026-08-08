@@ -1,6 +1,8 @@
 import { ChevronRight, Sparkles } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
 import { useSessionStore } from '../../stores/sessionStore'
+import { ErrorState } from '../ui/ErrorState'
+import { LOCALE } from '../../lib/utils'
 import type { Activity, Plan } from '../../types'
 
 function timeAgo(dateStr: string): string {
@@ -13,7 +15,7 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hrs / 24)
   if (days === 1) return 'yesterday'
   if (days < 7) return `${days}d ago`
-  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(dateStr).toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' })
 }
 
 function ActivityRow({
@@ -63,16 +65,39 @@ interface RecentActivityProps {
 
 export function RecentActivity({ onPlanTap, plans }: RecentActivityProps) {
   const session = useSessionStore((s) => s.session)!
-  const { data: activities = [], isLoading } = useActivities(session.coupleId)
+  const {
+    data: activities = [], isLoading, isError, isFetching, refetch,
+  } = useActivities(session.coupleId)
 
   // Build a quick lookup map from the live plans cache
   const planNameById = new Map(plans.map((p) => [p.id, p.name]))
 
   return (
     <div className="flex flex-col gap-2">
-      {isLoading ? (
-        <div className="rounded-2xl border border-cream-200 bg-cream-50 px-4 py-5">
-          <div className="h-4 w-32 bg-cream-200 rounded animate-pulse" />
+      {isError ? (
+        <ErrorState
+          title="Couldn't load recent activity"
+          message="Check your connection and try again."
+          onRetry={() => refetch()}
+          retrying={isFetching}
+          variant="inline"
+        />
+      ) : isLoading ? (
+        <div className="flex flex-col gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-2xl border border-cream-200
+                bg-white px-4 py-3"
+              aria-busy="true"
+            >
+              <div className="h-8 w-8 rounded-full bg-cream-200 animate-pulse shrink-0" />
+              <div className="flex-1 flex flex-col gap-1.5">
+                <div className="h-3.5 w-36 rounded bg-cream-200 animate-pulse" />
+                <div className="h-2.5 w-24 rounded bg-cream-100 animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : activities.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

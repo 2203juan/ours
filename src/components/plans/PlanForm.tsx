@@ -1,16 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import toast from 'react-hot-toast'
-import { Plus, ChevronDown, Star } from 'lucide-react'
+import { Plus, ChevronDown, Star, ClipboardPaste } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
-import { normalizeSocialUrl, isFoodCategory, cn } from '../../lib/utils'
+import { normalizeSocialUrl, isFoodCategory, formatBudgetDigits, blurActiveField, cn } from '../../lib/utils'
+import { notify } from '../../lib/toast'
+import { readClipboardLink, linkFieldFor, LINK_LABEL } from '../../lib/links'
+import { PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../../lib/supabase'
 import type { Plan, Category, PlanPriority, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
@@ -38,11 +40,15 @@ interface PlanFormProps {
   categories: Category[]
   plan?: Plan
   onDone: () => void
+  /** Reports unsaved-changes state so the parent Sheet can confirm before closing. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
+export function PlanForm({
+  session, categories, plan, onDone, onDirtyChange,
+}: PlanFormProps) {
   const isEditing = !!plan
   const createPlan = useCreatePlan()
   const updatePlan = useUpdatePlan()
@@ -53,15 +59,15 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   const [newCatName, setNewCatName] = useState('')
   const [newCatEmoji, setNewCatEmoji] = useState('✨')
 
-  // COP budget managed as local state outside RHF for live comma formatting
-  const [budgetDisplay, setBudgetDisplay] = useState<string>(
-    plan?.budget_estimate != null ? plan.budget_estimate.toLocaleString('en-US') : ''
-  )
+  // COP budget managed as local state outside RHF for live separator formatting
+  const initialBudget = plan?.budget_estimate != null
+    ? formatBudgetDigits(String(Math.round(plan.budget_estimate)))
+    : ''
+  const [budgetDisplay, setBudgetDisplay] = useState<string>(initialBudget)
 
   // Google Maps rating managed as local state (free-form decimal input, e.g. "4.6")
-  const [ratingDisplay, setRatingDisplay] = useState<string>(
-    plan?.maps_rating != null ? String(plan.maps_rating) : ''
-  )
+  const initialRating = plan?.maps_rating != null ? String(plan.maps_rating) : ''
+  const [ratingDisplay, setRatingDisplay] = useState<string>(initialRating)
 
   const handleRatingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = e.target.value.replace(/[^0-9.]/g, '')
@@ -74,12 +80,12 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     setRatingDisplay(raw)
   }
 
-  // Auto-expand details when editing a plan that has detail fields filled
+  // Auto-expand details when editing a plan that has detail fields filled.
+  // Pasting a link into a collapsed field opens it too — see handlePasteLink.
   const [showDetails, setShowDetails] = useState(() => {
     if (!plan) return false
     return !!(
       plan.description ||
-      plan.budget_estimate != null ||
       plan.location_text ||
       plan.instagram_ref ||
       plan.tiktok_url ||
@@ -94,7 +100,8 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    getValues,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -121,12 +128,46 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     : false
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9]/g, '')
-    if (!raw) { setBudgetDisplay(''); return }
-    setBudgetDisplay(Number(raw).toLocaleString('en-US'))
+    setBudgetDisplay(formatBudgetDigits(e.target.value.replace(/[^0-9]/g, '')))
   }
 
+  // The budget and rating inputs live outside react-hook-form, so isDirty alone
+  // would miss them.
+  const dirty =
+    isDirty ||
+    budgetDisplay !== initialBudget ||
+    ratingDisplay !== initialRating ||
+    images.length !== (plan?.images.length ?? 0) ||
+    images.some((url, i) => url !== plan?.images[i])
+
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
+
+  // Photos upload as soon as they're picked, so abandoning the form would
+  // leave them stranded in the bucket forever. Delete anything uploaded here
+  // that never made it into a saved plan.
+  //
+  // Safe under StrictMode's double-mount: on the first cleanup `images` is
+  // still the untouched original set, so there's nothing to delete.
+  const savedRef = useRef(false)
+  const imagesRef = useRef(images)
+  imagesRef.current = images
+  const originalImagesRef = useRef(plan?.images ?? [])
+
+  useEffect(() => {
+    return () => {
+      if (savedRef.current) return
+      for (const url of imagesRef.current) {
+        if (!originalImagesRef.current.includes(url)) {
+          void deleteFileByUrl(PLAN_IMAGES_BUCKET, url)
+        }
+      }
+    }
+  }, [])
+
   const onSubmit = async (values: FormValues) => {
+    blurActiveField()
     try {
       const budgetRaw = budgetDisplay.replace(/[^0-9]/g, '')
       const ratingNum = ratingDisplay ? parseFloat(ratingDisplay) : null
@@ -153,7 +194,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
 
       if (isEditing && plan) {
         await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload })
-        toast.success('Plan updated')
+        notify.success('Plan updated')
       } else {
         const effectiveKey = session.partnerKey ?? 'one'
         await createPlan.mutateAsync({
@@ -162,13 +203,38 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
           proposed_by: effectiveKey,
           actorName: effectiveKey === 'one' ? session.partnerOneName : session.partnerTwoName,
         })
-        toast.success('Plan added ✨')
+        notify.success('Plan added ✨')
       }
+      savedRef.current = true // photos are referenced now — don't clean them up
+      onDirtyChange?.(false) // saved — closing shouldn't ask to discard
       onDone()
     } catch (e) {
-      toast.error('Something went wrong.')
+      notify.error('Something went wrong.')
       console.error(e)
     }
+  }
+
+  /**
+   * Reads a link from the clipboard and drops it in the field it belongs to.
+   * Must run straight off the tap: Safari only permits `readText()` from a
+   * user gesture, and shows its own Paste confirmation first.
+   */
+  const handlePasteLink = async () => {
+    const link = await readClipboardLink()
+    if (!link) {
+      notify.info('No link found in your clipboard')
+      return
+    }
+    const field = linkFieldFor(link.kind)
+    setValue(field, link.url, { shouldDirty: true })
+    // Only fill the name if the user hasn't written one
+    if (link.suggestedName && !getValues('name').trim()) {
+      setValue('name', link.suggestedName, { shouldDirty: true })
+    }
+    // instagram/tiktok/description live inside the collapse — open it, or the
+    // paste would look like it did nothing
+    if (field !== 'maps_url') setShowDetails(true)
+    notify.success(`Added the ${LINK_LABEL[link.kind]}`)
   }
 
   const handleAddCategory = async () => {
@@ -183,14 +249,29 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       setShowNewCategory(false)
       setNewCatName('')
       setNewCatEmoji('✨')
-      toast.success(`Category "${cat.name}" created`)
+      notify.success(`Category "${cat.name}" created`)
     } catch {
-      toast.error('Could not create category.')
+      notify.error('Could not create category.')
     }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 px-5 pb-8">
+
+      {/* Paste a link — the usual way a plan starts is a Maps or Instagram
+          link someone copied. Creating only; editing has the fields already. */}
+      {!isEditing && (
+        <button
+          type="button"
+          onClick={handlePasteLink}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-dashed
+            border-cream-300 py-3 text-sm font-medium text-warm-500
+            hover:border-sand-400 hover:text-sand-600 active:scale-[0.99] transition-all"
+        >
+          <ClipboardPaste size={15} />
+          Start from a copied link
+        </button>
+      )}
 
       {/* ── Quick fields ── */}
       <Input
@@ -256,6 +337,30 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
             </button>
           </div>
         )}
+      </div>
+
+      {/* COP budget — promoted out of "more details" on purpose. Hidden away it
+          was rarely filled, so "cheap" got encoded as a category instead, which
+          then competed with the category that says what the plan actually is. */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-warm-500">Approx budget</label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-400
+            pointer-events-none select-none">
+            COP
+          </span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={budgetDisplay}
+            onChange={handleBudgetChange}
+            placeholder="0"
+            className="w-full rounded-2xl border border-cream-300 pl-12 pr-4 py-3 text-sm
+              text-warm-800 placeholder:text-warm-300
+              focus:outline-none focus:ring-2 focus:ring-sand-400 focus:border-transparent
+              transition-shadow"
+          />
+        </div>
       </div>
 
       <Input
@@ -333,28 +438,6 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
               {...register('description')}
               error={errors.description?.message}
             />
-
-            {/* COP budget — controlled input with comma formatting */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-warm-500">Approx budget</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-400
-                  pointer-events-none select-none">
-                  COP
-                </span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={budgetDisplay}
-                  onChange={handleBudgetChange}
-                  placeholder="0"
-                  className="w-full rounded-2xl border border-cream-300 pl-12 pr-4 py-3 text-sm
-                    text-warm-800 placeholder:text-warm-300
-                    focus:outline-none focus:ring-2 focus:ring-sand-400 focus:border-transparent
-                    transition-shadow"
-                />
-              </div>
-            </div>
 
             <Input
               label="Zone/Neighborhood"

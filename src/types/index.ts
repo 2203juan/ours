@@ -49,10 +49,25 @@ export interface Plan {
   ideal_date: string | null
   is_someday: boolean
   images: string[]
+  /** Partner keys that hearted this plan ("I want this too"). */
+  hearted_by: PartnerKey[]
   created_at: string
   updated_at: string
+  /** Set by a DB trigger when status flips to 'done'; null otherwise. */
+  completed_at: string | null
   // joined relation
   category?: Category
+}
+
+/** True when both partners have hearted the plan. */
+export function isMutual(plan: Plan): boolean {
+  return plan.hearted_by.includes('one') && plan.hearted_by.includes('two')
+}
+
+/** Best available "when did we do this" — completed_at, falling back for
+ *  optimistic updates and rows predating migration v9. */
+export function completionDate(plan: Plan): Date {
+  return new Date(plan.completed_at ?? plan.updated_at)
 }
 
 // =====================================================
@@ -111,9 +126,35 @@ export function getPartnerAvatar(session: Session, key: 'one' | 'two'): AvatarKe
 // Filter state
 // =====================================================
 
+export type PlanSort = 'recent' | 'category' | 'priority' | 'wanted' | 'date' | 'budget' | 'rating'
+
 export interface PlanFilters {
   categoryId: string | 'all'
   proposedBy: PartnerKey | 'all'
+  /** Free-text query matched against name, description, location and category. */
+  search: string
+  sort: PlanSort
+  /** Only plans both partners hearted. */
+  mutualOnly: boolean
+}
+
+export const DEFAULT_FILTERS: PlanFilters = {
+  categoryId: 'all',
+  proposedBy: 'all',
+  search: '',
+  sort: 'recent',
+  mutualOnly: false,
+}
+
+/** Kept short — these render at 16px inside a three-column row on small phones. */
+export const SORT_LABELS: Record<PlanSort, string> = {
+  recent: 'Newest',
+  category: 'Category',
+  priority: 'Priority',
+  wanted: 'Wanted',
+  date: 'Date',
+  budget: 'Budget',
+  rating: 'Rating',
 }
 
 // =====================================================
@@ -137,6 +178,7 @@ export interface CreatePlanPayload {
   ideal_date?: string | null
   is_someday: boolean
   images: string[]
+  hearted_by?: PartnerKey[]
 }
 
 export interface UpdatePlanPayload {
@@ -156,6 +198,7 @@ export interface UpdatePlanPayload {
   ideal_date?: string | null
   is_someday?: boolean
   images?: string[]
+  hearted_by?: PartnerKey[]
 }
 
 // =====================================================

@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 import { Camera, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { supabase, PLAN_IMAGES_BUCKET } from '../../lib/supabase'
+import { compressImage } from '../../lib/image'
+import { notify } from '../../lib/toast'
+import { supabase, PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../../lib/supabase'
 
 // ── Plan image uploader (multiple) ────────────────────────────────────────────
 
@@ -15,13 +17,17 @@ interface PlanImageUploadProps {
 export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  // Uploaded during this form session — removing one of these should also drop
+  // it from storage, since nothing else will ever reference it.
+  const uploadedHere = useRef(new Set<string>())
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || !files.length) return
     setUploading(true)
     try {
       const newUrls: string[] = []
-      for (const file of Array.from(files)) {
+      for (const original of Array.from(files)) {
+        const file = await compressImage(original)
         const slug = planId ?? `temp-${Date.now()}`
         const path = `${coupleId}/${slug}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
         const { error } = await supabase.storage
@@ -30,12 +36,24 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
         if (error) throw error
         const { data } = supabase.storage.from(PLAN_IMAGES_BUCKET).getPublicUrl(path)
         newUrls.push(data.publicUrl)
+        uploadedHere.current.add(data.publicUrl)
       }
       onChange([...value, ...newUrls])
     } catch (e) {
       console.error('Image upload failed', e)
+      notify.error('Could not upload that photo.')
     } finally {
       setUploading(false)
+      // Let the same file be picked again after a failure
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  const removeImage = (url: string) => {
+    onChange(value.filter((u) => u !== url))
+    if (uploadedHere.current.has(url)) {
+      uploadedHere.current.delete(url)
+      void deleteFileByUrl(PLAN_IMAGES_BUCKET, url)
     }
   }
 
@@ -45,12 +63,13 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
       <div className="flex flex-wrap gap-2">
         {value.map((url) => (
           <div key={url} className="relative h-20 w-20 rounded-2xl overflow-hidden border border-cream-300">
-            <img src={url} alt="" className="h-full w-full object-cover" />
+            <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
             <button
               type="button"
-              onClick={() => onChange(value.filter((u) => u !== url))}
-              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-warm-800/70
-                flex items-center justify-center text-white"
+              onClick={() => removeImage(url)}
+              aria-label="Remove photo"
+              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-scrim/70
+                flex items-center justify-center text-pure-white"
             >
               <X size={10} />
             </button>

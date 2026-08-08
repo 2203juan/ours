@@ -13,7 +13,9 @@ export function useActivities(coupleId: string) {
         .select('*')
         .eq('couple_id', coupleId)
         .order('created_at', { ascending: false })
-        .limit(5)
+        // Deep enough for the Recent list and for the unseen badge to give a
+        // useful count rather than capping at a handful.
+        .limit(20)
       if (error) throw error
       return data as Activity[]
     },

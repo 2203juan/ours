@@ -38,6 +38,18 @@ export function useRealtime(coupleId: string | undefined) {
           qc.invalidateQueries({ queryKey: ['categories', coupleId] })
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'activities',
+          filter: `couple_id=eq.${coupleId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ['activities', coupleId] })
+        }
+      )
       .subscribe()
 
     return () => {
