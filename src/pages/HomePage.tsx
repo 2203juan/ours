@@ -7,6 +7,8 @@ import { useUnseenActivity } from '../hooks/useUnseenActivity'
 import { useSessionStore } from '../stores/sessionStore'
 import { FilterBar } from '../components/plans/FilterBar'
 import { PlanList } from '../components/plans/PlanList'
+import { MemoriesList } from '../components/plans/MemoriesList'
+import { UpcomingSection } from '../components/plans/UpcomingSection'
 import { PlanListSkeleton } from '../components/plans/PlanListSkeleton'
 import { PlanDetail } from '../components/plans/PlanDetail'
 import { PlanForm, type PlanFormSeed } from '../components/plans/PlanForm'
@@ -130,6 +132,18 @@ export function HomePage() {
     }
   }
 
+  /** Toggle "I want this too" for the partner using this device. */
+  const handleToggleHeart = (plan: Plan) => {
+    const me = session.partnerKey
+    if (!me) return
+    const hearted_by = plan.hearted_by.includes(me)
+      ? plan.hearted_by.filter((k) => k !== me)
+      : [...plan.hearted_by, me]
+    updatePlan
+      .mutateAsync({ id: plan.id, coupleId: session.coupleId, payload: { hearted_by } })
+      .catch(() => notify.error('Could not save that.'))
+  }
+
   /** Quick add — name only, inheriting the category filter when one is set. */
   const handleQuickCreate = async (name: string) => {
     const partnerKey = session.partnerKey ?? 'one'
@@ -213,7 +227,7 @@ export function HomePage() {
                 {v === 'activity' && unseen > 0 && (
                   <span
                     className="absolute top-0.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full
-                      bg-blush-400 text-white text-[10px] font-semibold leading-4 tabular-nums"
+                      bg-blush-400 text-pure-white text-[10px] font-semibold leading-4 tabular-nums"
                     aria-label={`${unseen} new from your partner`}
                   >
                     {unseen > 9 ? '9+' : unseen}
@@ -244,11 +258,19 @@ export function HomePage() {
         <ErrorState onRetry={() => refetch()} retrying={isFetching} />
       ) : isLoading ? (
         <PlanListSkeleton />
+      ) : view === 'done' ? (
+        <MemoriesList
+          plans={viewPlans}
+          filters={filters}
+          session={session}
+          categories={categories}
+          onPlanClick={(p) => openPlan(p.id)}
+          onClearFilters={() => setFilters(DEFAULT_FILTERS)}
+        />
       ) : (
         <>
-          {view === 'to_do' && (
-            <QuickAdd onCreate={handleQuickCreate} onPastedLink={handlePastedLink} />
-          )}
+          <UpcomingSection plans={viewPlans} onPlanClick={(p) => openPlan(p.id)} />
+          <QuickAdd onCreate={handleQuickCreate} onPastedLink={handlePastedLink} />
           <PlanList
             plans={viewPlans}
             allPlansCount={plans.length}
@@ -258,6 +280,7 @@ export function HomePage() {
             session={session}
             onPlanClick={(p) => openPlan(p.id)}
             onToggleStatus={handleToggleStatus}
+            onToggleHeart={handleToggleHeart}
             onAddClick={() => openAddSheet()}
             onClearFilters={() => setFilters(DEFAULT_FILTERS)}
           />
@@ -305,6 +328,7 @@ export function HomePage() {
             categories={categories}
             session={session}
             onClose={closePlan}
+            onToggleHeart={handleToggleHeart}
             onMarkedDone={() => { closePlan(); setView('done') }}
             onMovedToDo={() => { closePlan(); setView('to_do') }}
           />

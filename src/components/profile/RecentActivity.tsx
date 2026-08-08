@@ -2,6 +2,7 @@ import { ChevronRight, Sparkles } from 'lucide-react'
 import { useActivities } from '../../hooks/useActivities'
 import { useSessionStore } from '../../stores/sessionStore'
 import { ErrorState } from '../ui/ErrorState'
+import { LOCALE } from '../../lib/utils'
 import type { Activity, Plan } from '../../types'
 
 function timeAgo(dateStr: string): string {
@@ -14,7 +15,7 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hrs / 24)
   if (days === 1) return 'yesterday'
   if (days < 7) return `${days}d ago`
-  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(dateStr).toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' })
 }
 
 function ActivityRow({

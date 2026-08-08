@@ -27,7 +27,7 @@ export function AvatarIcon({ name, avatarKey, size = 'md', className }: AvatarIc
   return (
     <div
       className={cn(
-        'rounded-full flex items-center justify-center shrink-0 font-medium text-white select-none',
+        'rounded-full flex items-center justify-center shrink-0 font-medium text-pure-white select-none',
         box,
         className
       )}

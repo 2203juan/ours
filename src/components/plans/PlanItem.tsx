@@ -5,6 +5,7 @@ import { PriorityBadge } from '../ui/Badge'
 import { StarRatingDisplay } from '../ui/StarRating'
 import { cn, truncate, formatBudget, formatDate } from '../../lib/utils'
 import { MapPin, CalendarDays, DollarSign, Check } from 'lucide-react'
+import { HeartButton } from '../ui/HeartButton'
 import { isValidProposer } from '../../hooks/usePlans'
 
 interface PlanItemProps {
@@ -12,9 +13,12 @@ interface PlanItemProps {
   session: Session
   onClick: (plan: Plan) => void
   onToggleStatus: (plan: Plan) => void
+  onToggleHeart: (plan: Plan) => void
 }
 
-export function PlanItem({ plan, session, onClick, onToggleStatus }: PlanItemProps) {
+export function PlanItem({
+  plan, session, onClick, onToggleStatus, onToggleHeart,
+}: PlanItemProps) {
   const proposerKey = isValidProposer(plan.proposed_by) ? plan.proposed_by : null
   const isMe = proposerKey === session.partnerKey
   const isDone = plan.status === 'done'
@@ -41,7 +45,7 @@ export function PlanItem({ plan, session, onClick, onToggleStatus }: PlanItemPro
           className={cn(
             'h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors',
             isDone
-              ? 'bg-sage-400 border-sage-400 text-white'
+              ? 'bg-sage-500 border-sage-500 text-white'
               : 'border-cream-300 hover:border-sage-400'
           )}
         >
@@ -123,6 +127,10 @@ export function PlanItem({ plan, session, onClick, onToggleStatus }: PlanItemPro
           </div>
         )}
       </button>
+
+      {session.partnerKey && (
+        <HeartButton plan={plan} me={session.partnerKey} onToggle={onToggleHeart} />
+      )}
     </div>
   )
 }

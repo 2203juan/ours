@@ -12,6 +12,7 @@ interface PlanListProps {
   session: Session
   onPlanClick: (plan: Plan) => void
   onToggleStatus: (plan: Plan) => void
+  onToggleHeart: (plan: Plan) => void
   onAddClick: () => void
   onClearFilters: () => void
 }
@@ -25,6 +26,7 @@ export function PlanList({
   session,
   onPlanClick,
   onToggleStatus,
+  onToggleHeart,
   onAddClick,
   onClearFilters,
 }: PlanListProps) {
@@ -121,6 +123,7 @@ export function PlanList({
           session={session}
           onPlanClick={onPlanClick}
           onToggleStatus={onToggleStatus}
+          onToggleHeart={onToggleHeart}
         />
       ))}
     </div>

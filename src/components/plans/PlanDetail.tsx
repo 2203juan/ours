@@ -4,11 +4,12 @@ import {
   Instagram, ExternalLink, ChevronLeft, ChevronRight, Utensils,
 } from 'lucide-react'
 import type { Plan, Category, Session } from '../../types'
-import { getPartnerName, getPartnerAvatar } from '../../types'
+import { getPartnerName, getPartnerAvatar, isMutual } from '../../types'
 import { useUpdatePlan, useDeletePlan, isValidProposer } from '../../hooks/usePlans'
 import { AvatarIcon } from '../ui/AvatarIcon'
 import { StatusBadge, PriorityBadge } from '../ui/Badge'
 import { StarRatingDisplay } from '../ui/StarRating'
+import { HeartButton } from '../ui/HeartButton'
 import { Button } from '../ui/Button'
 import { Sheet } from '../ui/Sheet'
 import { PlanForm } from './PlanForm'
@@ -20,12 +21,15 @@ interface PlanDetailProps {
   categories: Category[]
   session: Session
   onClose: () => void
+  onToggleHeart: (plan: Plan) => void
   onMarkedDone?: () => void
   onMovedToDo?: () => void
 }
 
 
-export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, onMovedToDo }: PlanDetailProps) {
+export function PlanDetail({
+  plan, categories, session, onClose, onToggleHeart, onMarkedDone, onMovedToDo,
+}: PlanDetailProps) {
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
   const [editing, setEditing] = useState(false)
@@ -185,6 +189,25 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
               </span>
             )}
           </div>
+
+          {/* Wanting it too */}
+          {session.partnerKey && (
+            <div className="flex items-center gap-2 mt-3">
+              <HeartButton
+                plan={plan}
+                me={session.partnerKey}
+                onToggle={onToggleHeart}
+                size="md"
+              />
+              <span className="text-sm text-warm-500">
+                {isMutual(plan)
+                  ? 'You both want this ✨'
+                  : plan.hearted_by.length === 1
+                    ? `${getPartnerName(session, plan.hearted_by[0])} wants this`
+                    : 'Nobody has hearted this yet'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Proposer */}
@@ -322,8 +345,8 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
                 <button
                   onClick={handleMarkDone}
                   disabled={updatePlan.isPending}
-                  className="flex-1 rounded-xl bg-sage-400 text-white py-2.5 text-sm font-semibold
-                    hover:bg-sage-500 active:scale-[0.98] transition-all disabled:opacity-60"
+                  className="flex-1 rounded-xl bg-sage-500 text-white py-2.5 text-sm font-semibold
+                    hover:bg-sage-600 active:scale-[0.98] transition-all disabled:opacity-60"
                 >
                   {updatePlan.isPending ? 'Saving…' : '✓ Save & mark done'}
                 </button>

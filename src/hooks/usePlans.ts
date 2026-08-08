@@ -4,6 +4,7 @@ import type {
   Plan, Category, PlanFilters, PlanSort, PlanPriority,
   CreatePlanPayload, UpdatePlanPayload, PartnerKey,
 } from '../types'
+import { isMutual } from '../types'
 import { ACTIVITIES_KEY } from './useActivities'
 
 const QUERY_KEY = 'plans'
@@ -47,6 +48,7 @@ export function filterPlans(plans: Plan[], filters: PlanFilters): Plan[] {
   return plans.filter((p) => {
     if (filters.categoryId !== 'all' && p.category_id !== filters.categoryId) return false
     if (filters.proposedBy !== 'all' && p.proposed_by !== (filters.proposedBy as string)) return false
+    if (filters.mutualOnly && !isMutual(p)) return false
     if (query) {
       const haystack = [p.name, p.description, p.location_text, p.category?.name]
         .filter(Boolean)
@@ -87,6 +89,13 @@ export function sortPlans(plans: Plan[], sort: PlanSort): Plan[] {
     case 'priority':
       return out.sort(
         (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || byNewest(a, b)
+      )
+
+    case 'wanted':
+      // What you both want floats to the top — a far better signal than the
+      // priority someone set by hand when they created the plan.
+      return out.sort(
+        (a, b) => b.hearted_by.length - a.hearted_by.length || byNewest(a, b)
       )
 
     case 'date':
@@ -199,7 +208,9 @@ export function useCreatePlan() {
         ideal_date: payload.ideal_date ?? null,
         is_someday: payload.is_someday,
         images: payload.images,
+        hearted_by: payload.hearted_by ?? [],
         created_at: now,
+        completed_at: null,
         updated_at: now,
         category: resolveCategory(qc, payload.couple_id, payload.category_id),
       }

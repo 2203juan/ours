@@ -2,16 +2,129 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Base ─────────────────────────────────────────────────────────────────── */
+/* ── Palette ──────────────────────────────────────────────────────────────
+ *
+ * Channel triplets (R G B) so Tailwind's <alpha-value> keeps working.
+ * See the note in tailwind.config.js for why the theme lives here.
+ *
+ * Reading the dark values: `cream` and `warm` invert, because they carry
+ * surfaces and text — the darkest text shade (warm-800) becomes the lightest.
+ * The accent ramps (sand, blush, sage) keep their hue and flip direction so
+ * that "higher number" still means "more prominent against the background".
+ */
 
 @layer base {
   :root {
+    --c-white:      255 255 255;
+    --c-scrim:       42  31  24;
+
+    --c-cream-50:  253 250 246;
+    --c-cream-100: 247 242 235;
+    --c-cream-200: 237 232 224;
+    --c-cream-300: 224 217 207;
+
+    --c-sand-50:   250 245 237;
+    --c-sand-100:  243 234 220;
+    --c-sand-200:  228 210 185;
+    --c-sand-300:  212 187 154;
+    --c-sand-400:  196 164 124;
+    --c-sand-500:  168 134  90;
+    --c-sand-600:  140 109  67;
+
+    --c-blush-100: 245 232 234;
+    --c-blush-200: 237 210 214;
+    --c-blush-300: 223 179 186;
+    --c-blush-400: 201 138 148;
+    --c-blush-500: 176  98 110;
+
+    --c-sage-100:  232 240 234;
+    --c-sage-200:  208 224 213;
+    --c-sage-300:  170 191 178;
+    --c-sage-400:  132 168 147;
+    --c-sage-500:   94 144 115;
+    --c-sage-600:   66 115  88;
+    --c-sage-700:   48  90  68;
+
+    --c-warm-50:   249 245 241;
+    --c-warm-100:  239 232 223;
+    --c-warm-200:  217 207 196;
+    --c-warm-300:  190 176 163;
+    --c-warm-400:  156 140 126;
+    --c-warm-500:  124 106  92;
+    --c-warm-600:   92  74  61;
+    --c-warm-700:   61  46  36;
+    --c-warm-800:   42  31  24;
+
+    --c-red-50:    254 242 242;
+    --c-red-100:   254 226 226;
+    --c-red-200:   254 202 202;
+    --c-red-300:   252 165 165;
+    --c-red-400:   248 113 113;
+    --c-red-500:   239  68  68;
+    --c-red-700:   185  28  28;
+
+    /* iPhone safe areas */
     --sat: env(safe-area-inset-top);
     --sab: env(safe-area-inset-bottom);
     --sal: env(safe-area-inset-left);
     --sar: env(safe-area-inset-right);
   }
 
+  .dark {
+    /* Cards sit slightly above the page rather than below it */
+    --c-white:      33  27  23;
+    --c-scrim:      10   8   6;
+
+    --c-cream-50:   23  19  15;
+    --c-cream-100:  43  36  30;
+    --c-cream-200:  54  46  39;
+    --c-cream-300:  69  58  49;
+
+    --c-sand-50:    46  36  26;
+    --c-sand-100:   58  46  33;
+    --c-sand-200:   94  74  50;
+    --c-sand-300:  140 109  67;
+    --c-sand-400:  168 134  90;
+    --c-sand-500:  196 164 124;
+    --c-sand-600:  212 187 154;
+
+    --c-blush-100:  58  37  41;
+    --c-blush-200:  74  46  52;
+    --c-blush-300: 122  74  82;
+    --c-blush-400: 201 138 148;
+    --c-blush-500: 223 179 186;
+
+    --c-sage-100:   34  48  40;
+    --c-sage-200:   46  64  54;
+    --c-sage-300:   58  81  69;
+    --c-sage-400:  132 168 147;
+    --c-sage-500:  154 184 166;
+    --c-sage-600:  190 210 198;
+    --c-sage-700:  212 228 218;
+
+    --c-warm-50:    34  28  24;
+    --c-warm-100:   46  39  33;
+    --c-warm-200:   74  62  53;
+    --c-warm-300:  110  96  84;
+    --c-warm-400:  154 138 124;
+    --c-warm-500:  186 172 158;
+    --c-warm-600:  205 191 178;
+    --c-warm-700:  228 218 208;
+    --c-warm-800:  245 239 232;
+
+    --c-red-50:     60  26  26;
+    --c-red-100:    76  32  32;
+    --c-red-200:   106  44  44;
+    --c-red-300:   150  70  70;
+    --c-red-400:   248 113 113;
+    --c-red-500:   239 100 100;
+    --c-red-700:   252 165 165;
+  }
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+@layer base {
   html {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
@@ -80,12 +193,19 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #D9CFC4;
+    background: rgb(var(--c-warm-200));
     border-radius: 99px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #9C8C7E;
+    background: rgb(var(--c-warm-400));
   }
+}
+
+/* ── Native control theming ───────────────────────────────────────────────── */
+/* Without this, date pickers and select popovers render as light widgets on a
+   dark page. */
+.dark {
+  color-scheme: dark;
 }
 
 /* ── Prevent iOS Safari auto-zoom on input focus ─────────────────────────── */
@@ -104,12 +224,9 @@ select {
 /* ── Custom checkbox toggle ───────────────────────────────────────────────── */
 
 input[type="checkbox"].sr-only:checked + div {
-  background-color: #A8865A;
+  background-color: rgb(var(--c-sand-500));
 }
 
 input[type="checkbox"].sr-only:checked ~ div {
   transform: translateX(1rem);
 }
-
-/* ── Peer-checked transitions for the toggle ─────────────────────────────── */
-/* Handled by Tailwind peer utilities – nothing extra needed */

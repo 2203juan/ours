@@ -68,8 +68,8 @@ export function PlanImageUpload({ coupleId, planId, value, onChange }: PlanImage
               type="button"
               onClick={() => removeImage(url)}
               aria-label="Remove photo"
-              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-warm-800/70
-                flex items-center justify-center text-white"
+              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-scrim/70
+                flex items-center justify-center text-pure-white"
             >
               <X size={10} />
             </button>

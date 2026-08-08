@@ -11,6 +11,7 @@ interface CategorySectionProps {
   session: Session
   onPlanClick: (plan: Plan) => void
   onToggleStatus: (plan: Plan) => void
+  onToggleHeart: (plan: Plan) => void
 }
 
 export function CategorySection({
@@ -20,6 +21,7 @@ export function CategorySection({
   session,
   onPlanClick,
   onToggleStatus,
+  onToggleHeart,
 }: CategorySectionProps) {
   const [open, setOpen] = useState(defaultOpen)
 
@@ -63,6 +65,7 @@ export function CategorySection({
               session={session}
               onClick={onPlanClick}
               onToggleStatus={onToggleStatus}
+              onToggleHeart={onToggleHeart}
             />
           ))}
         </div>

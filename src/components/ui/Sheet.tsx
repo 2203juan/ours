@@ -140,7 +140,7 @@ export function Sheet({
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-warm-800/40 backdrop-blur-[2px] animate-fade-in"
+        className="absolute inset-0 bg-scrim/50 backdrop-blur-[2px] animate-fade-in"
         onClick={requestClose}
       />
 
@@ -188,7 +188,7 @@ export function Sheet({
 
         {/* Discard confirmation */}
         {askConfirm && (
-          <div className="absolute inset-0 z-20 flex items-end bg-warm-800/30 animate-fade-in">
+          <div className="absolute inset-0 z-20 flex items-end bg-scrim/40 animate-fade-in">
             <div
               role="alertdialog"
               aria-label={confirmTitle}

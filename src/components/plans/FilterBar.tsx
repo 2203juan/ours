@@ -1,6 +1,7 @@
-import { Search, X, ArrowUpDown } from 'lucide-react'
+import { Search, X, ArrowUpDown, Heart } from 'lucide-react'
 import type { PlanFilters, PlanSort, Category, Session } from '../../types'
 import { SORT_LABELS, DEFAULT_FILTERS } from '../../types'
+import { cn } from '../../lib/utils'
 
 interface FilterBarProps {
   filters: PlanFilters
@@ -20,6 +21,7 @@ export function FilterBar({ filters, onChange, categories, session }: FilterBarP
     filters.proposedBy !== 'all',
     filters.sort !== DEFAULT_FILTERS.sort,
     filters.search.trim() !== '',
+    filters.mutualOnly,
   ].filter(Boolean).length
 
   return (
@@ -109,6 +111,20 @@ export function FilterBar({ filters, onChange, categories, session }: FilterBarP
             ))}
           </select>
         </div>
+
+        <button
+          onClick={() => onChange({ ...filters, mutualOnly: !filters.mutualOnly })}
+          aria-pressed={filters.mutualOnly}
+          title="Only plans you both want"
+          className={cn(
+            'shrink-0 rounded-xl border px-2.5 flex items-center justify-center transition-colors',
+            filters.mutualOnly
+              ? 'border-blush-300 bg-blush-100 text-blush-500'
+              : 'border-cream-300 bg-cream-50 text-warm-400 hover:text-blush-400'
+          )}
+        >
+          <Heart size={13} className={cn(filters.mutualOnly && 'fill-current')} />
+        </button>
 
         {activeCount > 0 && (
           <button

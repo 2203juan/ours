@@ -1,12 +1,24 @@
 import { useState } from 'react'
-import { Copy, Check, LogOut, Heart, RefreshCw } from 'lucide-react'
+import { Copy, Check, LogOut, Heart, RefreshCw, Sun, Moon, SunMoon } from 'lucide-react'
 import { useSessionStore } from '../../stores/sessionStore'
+import { useThemeStore, type ThemePreference } from '../../stores/themeStore'
+import { usePlans } from '../../hooks/usePlans'
 import { AvatarIcon } from '../ui/AvatarIcon'
+import { CoupleStats } from './CoupleStats'
 import { notify } from '../../lib/toast'
+import { cn } from '../../lib/utils'
 import type { PartnerKey } from '../../types'
+
+const THEME_OPTIONS: Array<{ value: ThemePreference; label: string; icon: typeof Sun }> = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'Auto', icon: SunMoon },
+]
 
 export function ProfilePage() {
   const { session, setPartnerKey, clearSession } = useSessionStore()
+  const { preference, setPreference } = useThemeStore()
+  const { data: plans = [] } = usePlans(session?.coupleId ?? '')
   const [copied, setCopied] = useState(false)
 
   if (!session) return null
@@ -53,6 +65,36 @@ export function ProfilePage() {
           <h2 className="font-serif text-xl text-warm-800">{session.coupleName}</h2>
           <Heart size={12} className="fill-blush-400 text-blush-400" />
         </div>
+      </div>
+
+      {/* Stats */}
+      <CoupleStats plans={plans} session={session} />
+
+      {/* Appearance */}
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-medium text-warm-400 uppercase tracking-wide">Appearance</p>
+        <div className="flex rounded-2xl bg-cream-100 p-1 gap-1">
+          {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              onClick={() => setPreference(value)}
+              aria-pressed={preference === value}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl',
+                'text-sm font-medium transition-all',
+                preference === value
+                  ? 'bg-white text-warm-800 shadow-soft'
+                  : 'text-warm-400 hover:text-warm-600'
+              )}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-warm-400">
+          Auto follows your phone's light or dark setting.
+        </p>
       </div>
 
       {/* Couple code */}
