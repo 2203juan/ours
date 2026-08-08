@@ -111,9 +111,30 @@ export function getPartnerAvatar(session: Session, key: 'one' | 'two'): AvatarKe
 // Filter state
 // =====================================================
 
+export type PlanSort = 'recent' | 'priority' | 'date' | 'budget' | 'rating'
+
 export interface PlanFilters {
   categoryId: string | 'all'
   proposedBy: PartnerKey | 'all'
+  /** Free-text query matched against name, description, location and category. */
+  search: string
+  sort: PlanSort
+}
+
+export const DEFAULT_FILTERS: PlanFilters = {
+  categoryId: 'all',
+  proposedBy: 'all',
+  search: '',
+  sort: 'recent',
+}
+
+/** Kept short — these render at 16px inside a three-column row on small phones. */
+export const SORT_LABELS: Record<PlanSort, string> = {
+  recent: 'Newest',
+  priority: 'Priority',
+  date: 'Date',
+  budget: 'Budget',
+  rating: 'Rating',
 }
 
 // =====================================================

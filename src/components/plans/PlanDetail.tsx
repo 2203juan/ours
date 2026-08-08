@@ -3,7 +3,6 @@ import {
   Edit2, Trash2, MapPin, CalendarDays, DollarSign,
   Instagram, ExternalLink, ChevronLeft, ChevronRight, Utensils,
 } from 'lucide-react'
-import toast from 'react-hot-toast'
 import type { Plan, Category, Session } from '../../types'
 import { getPartnerName, getPartnerAvatar } from '../../types'
 import { useUpdatePlan, useDeletePlan, isValidProposer } from '../../hooks/usePlans'
@@ -14,6 +13,7 @@ import { Button } from '../ui/Button'
 import { Sheet } from '../ui/Sheet'
 import { PlanForm } from './PlanForm'
 import { formatBudget, formatDate, normalizeSocialUrl } from '../../lib/utils'
+import { notify } from '../../lib/toast'
 
 interface PlanDetailProps {
   plan: Plan
@@ -29,6 +29,7 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
   const updatePlan = useUpdatePlan()
   const deletePlan = useDeletePlan()
   const [editing, setEditing] = useState(false)
+  const [editDirty, setEditDirty] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
 
@@ -45,10 +46,10 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
         coupleId: session.coupleId,
         payload: { status: 'done', completion_note: doneNote.trim() || null },
       })
-      toast.success('🎉 Marked as done!');
+      notify.success('🎉 Marked as done!');
       (onMarkedDone ?? onClose)()
     } catch {
-      toast.error('Could not update status.')
+      notify.error('Could not update status.')
     }
   }
 
@@ -59,31 +60,42 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
         coupleId: session.coupleId,
         payload: { status: 'to_do' },
       })
-      toast.success('Moved back to To do');
+      notify.success('Moved back to To do');
       (onMovedToDo ?? onClose)()
     } catch {
-      toast.error('Could not update status.')
+      notify.error('Could not update status.')
     }
   }
 
   const handleDelete = async () => {
     try {
       await deletePlan.mutateAsync({ plan })
-      toast.success('Plan deleted')
+      notify.success('Plan deleted')
       onClose()
     } catch {
-      toast.error('Could not delete plan.')
+      notify.error('Could not delete plan.')
     }
   }
 
   if (editing) {
+    const closeEditor = () => { setEditing(false); setEditDirty(false) }
     return (
-      <Sheet open onClose={() => setEditing(false)} title="Edit plan" height="full">
+      <Sheet
+        open
+        onClose={closeEditor}
+        title="Edit plan"
+        height="full"
+        confirmClose={editDirty}
+        confirmMessage="Your changes to this plan haven't been saved."
+      >
         <PlanForm
           session={session}
           categories={categories}
           plan={plan}
-          onDone={() => { setEditing(false); onClose() }}
+          // Return to the detail view rather than dismissing both sheets —
+          // after saving you almost always want to see the result.
+          onDone={closeEditor}
+          onDirtyChange={setEditDirty}
         />
       </Sheet>
     )
@@ -146,6 +158,7 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
             <div className="flex gap-2 shrink-0 mt-1">
               <button
                 onClick={() => setEditing(true)}
+                aria-label="Edit plan"
                 className="h-8 w-8 rounded-full bg-cream-100 flex items-center justify-center
                   text-warm-500 hover:bg-cream-200 transition-colors"
               >
@@ -153,6 +166,8 @@ export function PlanDetail({ plan, categories, session, onClose, onMarkedDone, o
               </button>
               <button
                 onClick={() => setConfirmDelete((v) => !v)}
+                aria-label="Delete plan"
+                aria-expanded={confirmDelete}
                 className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center
                   text-red-400 hover:bg-red-100 transition-colors"
               >

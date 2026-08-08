@@ -1,7 +1,7 @@
 import type { Plan, Category, PlanFilters, Session } from '../../types'
-import { filterPlans } from '../../hooks/usePlans'
+import { filterPlans, sortPlans } from '../../hooks/usePlans'
 import { CategorySection } from './CategorySection'
-import { ClipboardList, CheckCheck } from 'lucide-react'
+import { ClipboardList, CheckCheck, SearchX } from 'lucide-react'
 
 interface PlanListProps {
   plans: Plan[]         // already filtered by view (to_do | done)
@@ -11,7 +11,9 @@ interface PlanListProps {
   filters: PlanFilters
   session: Session
   onPlanClick: (plan: Plan) => void
+  onToggleStatus: (plan: Plan) => void
   onAddClick: () => void
+  onClearFilters: () => void
 }
 
 export function PlanList({
@@ -22,9 +24,11 @@ export function PlanList({
   filters,
   session,
   onPlanClick,
+  onToggleStatus,
   onAddClick,
+  onClearFilters,
 }: PlanListProps) {
-  const filtered = filterPlans(plans, filters)
+  const filtered = sortPlans(filterPlans(plans, filters), filters.sort)
 
   const groups: Array<{ category: Category | null; plans: Plan[] }> = []
 
@@ -39,6 +43,29 @@ export function PlanList({
   if (uncategorized.length) groups.push({ category: null, plans: uncategorized })
 
   if (!filtered.length) {
+    // A search that found nothing is its own state — never imply the list is empty
+    if (filters.search.trim()) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+          <div className="h-14 w-14 rounded-full bg-cream-100 flex items-center justify-center mb-4">
+            <SearchX size={22} className="text-warm-300" />
+          </div>
+          <p className="text-warm-600 font-medium mb-1">
+            No matches for “{filters.search.trim()}”
+          </p>
+          <p className="text-sm text-warm-400 mb-6">
+            Try another word, or search in the {view === 'to_do' ? 'Done' : 'To do'} tab.
+          </p>
+          <button
+            onClick={onClearFilters}
+            className="text-sm font-medium text-sand-500 underline underline-offset-2"
+          >
+            Clear search & filters
+          </button>
+        </div>
+      )
+    }
+
     if (view === 'done') {
       return (
         <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
@@ -93,6 +120,7 @@ export function PlanList({
           defaultOpen={true}
           session={session}
           onPlanClick={onPlanClick}
+          onToggleStatus={onToggleStatus}
         />
       ))}
     </div>

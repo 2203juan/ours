@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import toast from 'react-hot-toast'
 import { Plus, ChevronDown, Star } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
@@ -10,7 +9,9 @@ import { Select } from '../ui/Select'
 import { PlanImageUpload } from '../ui/ImageUpload'
 import { useCreatePlan, useUpdatePlan } from '../../hooks/usePlans'
 import { useCreateCategory } from '../../hooks/useCategories'
-import { normalizeSocialUrl, isFoodCategory, cn } from '../../lib/utils'
+import { normalizeSocialUrl, isFoodCategory, formatBudgetDigits, cn } from '../../lib/utils'
+import { notify } from '../../lib/toast'
+import { PLAN_IMAGES_BUCKET, deleteFileByUrl } from '../../lib/supabase'
 import type { Plan, Category, PlanPriority, Session } from '../../types'
 
 // ── Zod schema ────────────────────────────────────────────────────────────────
@@ -33,16 +34,27 @@ type FormValues = z.infer<typeof schema>
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+/** Prefilled fields for a new plan, e.g. from a pasted link. */
+export type PlanFormSeed = Partial<
+  Pick<FormValues, 'name' | 'maps_url' | 'instagram_ref' | 'tiktok_url' | 'description'>
+>
+
 interface PlanFormProps {
   session: Session
   categories: Category[]
   plan?: Plan
+  /** Ignored when editing an existing plan. */
+  seed?: PlanFormSeed
   onDone: () => void
+  /** Reports unsaved-changes state so the parent Sheet can confirm before closing. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
+export function PlanForm({
+  session, categories, plan, seed, onDone, onDirtyChange,
+}: PlanFormProps) {
   const isEditing = !!plan
   const createPlan = useCreatePlan()
   const updatePlan = useUpdatePlan()
@@ -53,15 +65,15 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
   const [newCatName, setNewCatName] = useState('')
   const [newCatEmoji, setNewCatEmoji] = useState('✨')
 
-  // COP budget managed as local state outside RHF for live comma formatting
-  const [budgetDisplay, setBudgetDisplay] = useState<string>(
-    plan?.budget_estimate != null ? plan.budget_estimate.toLocaleString('en-US') : ''
-  )
+  // COP budget managed as local state outside RHF for live separator formatting
+  const initialBudget = plan?.budget_estimate != null
+    ? formatBudgetDigits(String(Math.round(plan.budget_estimate)))
+    : ''
+  const [budgetDisplay, setBudgetDisplay] = useState<string>(initialBudget)
 
   // Google Maps rating managed as local state (free-form decimal input, e.g. "4.6")
-  const [ratingDisplay, setRatingDisplay] = useState<string>(
-    plan?.maps_rating != null ? String(plan.maps_rating) : ''
-  )
+  const initialRating = plan?.maps_rating != null ? String(plan.maps_rating) : ''
+  const [ratingDisplay, setRatingDisplay] = useState<string>(initialRating)
 
   const handleRatingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = e.target.value.replace(/[^0-9.]/g, '')
@@ -74,8 +86,10 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     setRatingDisplay(raw)
   }
 
-  // Auto-expand details when editing a plan that has detail fields filled
+  // Auto-expand details when editing a plan that has detail fields filled,
+  // or when a seeded link landed in a field that lives inside the collapse.
   const [showDetails, setShowDetails] = useState(() => {
+    if (seed?.instagram_ref || seed?.tiktok_url || seed?.description) return true
     if (!plan) return false
     return !!(
       plan.description ||
@@ -94,19 +108,19 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: plan?.name ?? '',
+      name: plan?.name ?? seed?.name ?? '',
       category_id: plan?.category_id ?? '',
-      description: plan?.description ?? '',
+      description: plan?.description ?? seed?.description ?? '',
       priority: plan?.priority ?? 'normal',
       location_text: plan?.location_text ?? '',
-      maps_url: plan?.maps_url ?? '',
+      maps_url: plan?.maps_url ?? seed?.maps_url ?? '',
       menu_url: plan?.menu_url ?? '',
-      instagram_ref: plan?.instagram_ref ?? '',
-      tiktok_url: plan?.tiktok_url ?? '',
+      instagram_ref: plan?.instagram_ref ?? seed?.instagram_ref ?? '',
+      tiktok_url: plan?.tiktok_url ?? seed?.tiktok_url ?? '',
       is_someday: plan?.is_someday ?? true,
       ideal_date: plan?.ideal_date ?? '',
     },
@@ -121,10 +135,43 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
     : false
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9]/g, '')
-    if (!raw) { setBudgetDisplay(''); return }
-    setBudgetDisplay(Number(raw).toLocaleString('en-US'))
+    setBudgetDisplay(formatBudgetDigits(e.target.value.replace(/[^0-9]/g, '')))
   }
+
+  // The budget and rating inputs live outside react-hook-form, so isDirty alone
+  // would miss them.
+  const dirty =
+    isDirty ||
+    budgetDisplay !== initialBudget ||
+    ratingDisplay !== initialRating ||
+    images.length !== (plan?.images.length ?? 0) ||
+    images.some((url, i) => url !== plan?.images[i])
+
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
+
+  // Photos upload as soon as they're picked, so abandoning the form would
+  // leave them stranded in the bucket forever. Delete anything uploaded here
+  // that never made it into a saved plan.
+  //
+  // Safe under StrictMode's double-mount: on the first cleanup `images` is
+  // still the untouched original set, so there's nothing to delete.
+  const savedRef = useRef(false)
+  const imagesRef = useRef(images)
+  imagesRef.current = images
+  const originalImagesRef = useRef(plan?.images ?? [])
+
+  useEffect(() => {
+    return () => {
+      if (savedRef.current) return
+      for (const url of imagesRef.current) {
+        if (!originalImagesRef.current.includes(url)) {
+          void deleteFileByUrl(PLAN_IMAGES_BUCKET, url)
+        }
+      }
+    }
+  }, [])
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -153,7 +200,7 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
 
       if (isEditing && plan) {
         await updatePlan.mutateAsync({ id: plan.id, coupleId: session.coupleId, payload })
-        toast.success('Plan updated')
+        notify.success('Plan updated')
       } else {
         const effectiveKey = session.partnerKey ?? 'one'
         await createPlan.mutateAsync({
@@ -162,11 +209,13 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
           proposed_by: effectiveKey,
           actorName: effectiveKey === 'one' ? session.partnerOneName : session.partnerTwoName,
         })
-        toast.success('Plan added ✨')
+        notify.success('Plan added ✨')
       }
+      savedRef.current = true // photos are referenced now — don't clean them up
+      onDirtyChange?.(false) // saved — closing shouldn't ask to discard
       onDone()
     } catch (e) {
-      toast.error('Something went wrong.')
+      notify.error('Something went wrong.')
       console.error(e)
     }
   }
@@ -183,9 +232,9 @@ export function PlanForm({ session, categories, plan, onDone }: PlanFormProps) {
       setShowNewCategory(false)
       setNewCatName('')
       setNewCatEmoji('✨')
-      toast.success(`Category "${cat.name}" created`)
+      notify.success(`Category "${cat.name}" created`)
     } catch {
-      toast.error('Could not create category.')
+      notify.error('Could not create category.')
     }
   }
 

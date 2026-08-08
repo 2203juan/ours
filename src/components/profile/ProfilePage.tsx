@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Copy, Check, LogOut, Heart, RefreshCw } from 'lucide-react'
-import toast from 'react-hot-toast'
 import { useSessionStore } from '../../stores/sessionStore'
 import { AvatarIcon } from '../ui/AvatarIcon'
+import { notify } from '../../lib/toast'
 import type { PartnerKey } from '../../types'
 
 export function ProfilePage() {
@@ -25,7 +25,7 @@ export function ProfilePage() {
 
   const switchTo = (key: PartnerKey) => {
     setPartnerKey(key)
-    toast.success(`Switched to ${key === 'one' ? session.partnerOneName : session.partnerTwoName}`)
+    notify.success(`Switched to ${key === 'one' ? session.partnerOneName : session.partnerTwoName}`)
   }
 
   return (

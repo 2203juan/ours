@@ -46,10 +46,22 @@ export function validateCodeFormat(code: string): string | null {
   return null
 }
 
-/** Format a COP budget amount with thousand separators. */
+const copFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0,
+})
+
+/** Format a COP budget amount using Colombian conventions ("$ 150.000"). */
 export function formatBudget(amount: number | null | undefined): string {
   if (amount == null) return ''
-  return `COP ${amount.toLocaleString('en-US')}`
+  return copFormatter.format(amount)
+}
+
+/** Group digits with Colombian thousand separators — for live input formatting. */
+export function formatBudgetDigits(digits: string): string {
+  if (!digits) return ''
+  return Number(digits).toLocaleString('es-CO')
 }
 
 /** Returns true if a category name/emoji suggests it's food/restaurant related. */

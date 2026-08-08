@@ -10,6 +10,7 @@ interface CategorySectionProps {
   defaultOpen?: boolean
   session: Session
   onPlanClick: (plan: Plan) => void
+  onToggleStatus: (plan: Plan) => void
 }
 
 export function CategorySection({
@@ -18,6 +19,7 @@ export function CategorySection({
   defaultOpen = true,
   session,
   onPlanClick,
+  onToggleStatus,
 }: CategorySectionProps) {
   const [open, setOpen] = useState(defaultOpen)
 
@@ -60,6 +62,7 @@ export function CategorySection({
               plan={plan}
               session={session}
               onClick={onPlanClick}
+              onToggleStatus={onToggleStatus}
             />
           ))}
         </div>
