@@ -1,9 +1,13 @@
 import { NavLink } from 'react-router-dom'
-import { List, Shuffle, User } from 'lucide-react'
+import { List, Map, Shuffle, User } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
+/* Map sits next to Plans: both answer "what should we do", one by list and
+   one by how far away it is. Surprise and Profile stay where they were so
+   the tab bar doesn't move under anyone's thumb. */
 const NAV = [
   { to: '/', icon: List, label: 'Plans', end: true },
+  { to: '/map', icon: Map, label: 'Map', end: false },
   { to: '/surprise', icon: Shuffle, label: 'Surprise', end: false },
   { to: '/profile', icon: User, label: 'Profile', end: false },
 ]

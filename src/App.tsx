@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -9,6 +10,15 @@ import { HomePage } from './pages/HomePage'
 import { SurprisePage } from './pages/SurprisePage'
 import { ProfileSettingsPage } from './pages/ProfileSettingsPage'
 import { useRealtime } from './hooks/useRealtime'
+
+/**
+ * Leaflet and the map screen are a third of the app's JavaScript, and most
+ * sessions never leave the list. Loading them only when the Map tab is
+ * opened keeps the first paint where it was before the tab existed.
+ */
+const MapPage = lazy(() =>
+  import('./pages/MapPage').then((m) => ({ default: m.MapPage }))
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +46,16 @@ function AppRoutes() {
     <AppShell>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route
+          path="/map"
+          element={
+            // A blank cream panel for the fraction of a second the chunk
+            // takes — a spinner here would flash and read as slower.
+            <Suspense fallback={<div className="h-full bg-cream-50" />}>
+              <MapPage />
+            </Suspense>
+          }
+        />
         <Route path="/surprise" element={<SurprisePage />} />
         <Route path="/profile" element={<ProfileSettingsPage />} />
         <Route path="*" element={<HomePage />} />

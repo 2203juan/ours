@@ -25,6 +25,15 @@ export interface Category {
 }
 
 export type PlanStatus = 'to_do' | 'done'
+
+/**
+ * Where a plan's coordinates came from:
+ *   maps_url → read straight out of the Google Maps link (exact)
+ *   geocode  → looked up by name and address (approximate; the map says so)
+ *   manual   → someone dropped the pin by hand; outranks the other two
+ */
+export type GeoSource = 'maps_url' | 'geocode' | 'manual'
+
 export type PlanPriority = 'low' | 'normal' | 'high'
 
 export interface Plan {
@@ -45,6 +54,12 @@ export interface Plan {
   instagram_ref: string | null
   tiktok_url: string | null
   menu_url: string | null
+  /** The place's coordinates. See GeoSource for where they came from. */
+  lat: number | null
+  lng: number | null
+  geo_source: GeoSource | null
+  /** Last resolution attempt, successful or not — stops the retry loop. */
+  geo_resolved_at: string | null
   completion_note: string | null
   ideal_date: string | null
   is_someday: boolean
@@ -57,6 +72,22 @@ export interface Plan {
   completed_at: string | null
   // joined relation
   category?: Category
+}
+
+/** A plan the map can draw. Narrows the nullable columns in one step. */
+export type LocatedPlan = Plan & { lat: number; lng: number }
+
+export function hasCoords(plan: Plan): plan is LocatedPlan {
+  return plan.lat != null && plan.lng != null
+}
+
+/**
+ * Has something to locate itself by, even without a pin yet. This is what
+ * separates "still needs resolving" from "never was a place" (watch a series,
+ * cook at home) — the second kind shouldn't show up as unfinished work.
+ */
+export function isLocatable(plan: Plan): boolean {
+  return !!(plan.maps_url || plan.location_text)
 }
 
 /** True when both partners have hearted the plan. */
@@ -175,6 +206,10 @@ export interface CreatePlanPayload {
   instagram_ref?: string | null
   tiktok_url?: string | null
   menu_url?: string | null
+  lat?: number | null
+  lng?: number | null
+  geo_source?: GeoSource | null
+  geo_resolved_at?: string | null
   ideal_date?: string | null
   is_someday: boolean
   images: string[]
@@ -194,6 +229,10 @@ export interface UpdatePlanPayload {
   instagram_ref?: string | null
   tiktok_url?: string | null
   menu_url?: string | null
+  lat?: number | null
+  lng?: number | null
+  geo_source?: GeoSource | null
+  geo_resolved_at?: string | null
   completion_note?: string | null
   ideal_date?: string | null
   is_someday?: boolean

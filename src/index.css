@@ -236,3 +236,173 @@ input[type="checkbox"].sr-only:checked + div {
 input[type="checkbox"].sr-only:checked ~ div {
   transform: translateX(1rem);
 }
+
+/* ── Map ──────────────────────────────────────────────────────────────────── */
+
+/*
+ * Leaflet renders markers and controls outside React, so their styling lives
+ * here rather than in a component. The map itself is the only surface in the
+ * app that isn't cream — tiles bring their own palette — so the chrome on top
+ * of it leans on white pills and shadows to stay readable over anything.
+ */
+
+.leaflet-container {
+  background: rgb(var(--c-cream-100));
+  font-family: inherit;
+  /* The page behind the map must not scroll when a drag runs off the edge */
+  touch-action: none;
+}
+
+/*
+ * OpenStreetMap's default style is built for a full-screen map, not for a
+ * panel of cream cards: its greens and yellows shout next to the app's
+ * palette. Toning the saturation down settles it without hiding anything.
+ *
+ * Dark mode inverts the tiles and spins the hue back, which is how you get a
+ * dark basemap out of a light one — water stays blue, parks stay green, the
+ * paper turns to ink. The filter sits on the tile pane alone, so the pins,
+ * the blue location dot and the attribution keep their real colours.
+ */
+.leaflet-tile-pane {
+  filter: saturate(0.8) brightness(1.02);
+}
+
+.map--dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) saturate(0.72) brightness(0.92) contrast(0.95);
+}
+
+.leaflet-control-attribution {
+  background: rgb(var(--c-white) / 0.75) !important;
+  color: rgb(var(--c-warm-400)) !important;
+  font-size: 9px !important;
+  backdrop-filter: blur(4px);
+}
+
+.leaflet-control-attribution a {
+  color: rgb(var(--c-warm-500)) !important;
+}
+
+/* Marker wrapper: the icon sizes itself, so nothing here may clip it */
+.pin-wrap {
+  background: none;
+  border: none;
+  width: auto !important;
+  height: auto !important;
+}
+
+.pin {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* iconAnchor puts the coordinate at x=0, so the pill centres itself on it */
+  transform: translateX(-50%);
+  padding: 4px 9px 4px 6px;
+  border-radius: 999px;
+  background: rgb(var(--c-white));
+  border: 1px solid rgb(var(--c-cream-300));
+  box-shadow: 0 3px 12px -2px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pin__emoji {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.pin__time {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(var(--c-warm-700));
+  letter-spacing: -0.01em;
+}
+
+/* The little stem that points at the actual coordinate */
+.pin__tail {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: rgb(var(--c-white));
+  border-right: 1px solid rgb(var(--c-cream-300));
+  border-bottom: 1px solid rgb(var(--c-cream-300));
+  transform: rotate(45deg);
+}
+
+.pin--selected {
+  background: rgb(var(--c-sand-500));
+  border-color: rgb(var(--c-sand-500));
+  transform: translateX(-50%) scale(1.12);
+  box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.32);
+  z-index: 1000;
+}
+
+.pin--selected .pin__time {
+  color: #ffffff;
+}
+
+.pin--selected .pin__tail {
+  background: rgb(var(--c-sand-500));
+  border-color: rgb(var(--c-sand-500));
+}
+
+/* Places already ticked off recede, so the map reads as "where to next" */
+.pin--done:not(.pin--selected) {
+  opacity: 0.62;
+}
+
+/* "You are here" */
+.me {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+}
+
+.me__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #2f7cf6;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(47, 124, 246, 0.35), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* An approximate fix says so by breathing rather than by a label */
+.me--approx::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(47, 124, 246, 0.28);
+  animation: mePulse 2.2s ease-out infinite;
+}
+
+@keyframes mePulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* The pin you drag around in the "place it yourself" sheet */
+.picker-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px 999px 999px 2px;
+  transform: rotate(-45deg);
+  background: rgb(var(--c-blush-400));
+  border: 3px solid rgb(var(--c-white));
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.35);
+}
+
+/* Horizontal card rail under the map */
+.snap-x-mandatory {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-center {
+  scroll-snap-align: center;
+}

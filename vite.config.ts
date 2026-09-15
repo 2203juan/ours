@@ -68,6 +68,30 @@ export default defineConfig({
             },
           },
           {
+            // Map tiles. Cache-first and long-lived: a tile for a given
+            // square of Cali never changes, and re-fetching them on every
+            // pan is the fastest way to burn a phone's data plan.
+            urlPattern: /^https:\/\/tile\.openstreetmap\.org\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'map-tiles',
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Driving times. They don't change (the public router has no
+            // live traffic), so a cached answer is as good as a fresh one
+            // and the map fills in instantly on the second visit.
+            urlPattern: /^https:\/\/router\.project-osrm\.org\/.*/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'driving-times',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
             handler: 'StaleWhileRevalidate',
             options: {
@@ -92,6 +116,9 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           supabase: ['@supabase/supabase-js'],
           query: ['@tanstack/react-query'],
+          // Leaflet only loads on the map tab; keeping it out of the main
+          // bundle means the list still opens as fast as it did before.
+          map: ['leaflet'],
         },
       },
     },
