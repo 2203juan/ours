@@ -290,14 +290,22 @@ input[type="checkbox"].sr-only:checked ~ div {
   height: auto !important;
 }
 
+/*
+ * A pin is a preview, not a dot: photo, name, rating and drive time, small
+ * enough that a dozen of them still read as a map.
+ *
+ * Fixed height in both states so `iconAnchor` keeps the tail on the
+ * coordinate — see PIN_HEIGHT in pins.ts, which must match.
+ */
 .pin {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  height: 36px;
   /* iconAnchor puts the coordinate at x=0, so the pill centres itself on it */
   transform: translateX(-50%);
-  padding: 4px 9px 4px 6px;
+  padding: 0 10px 0 4px;
   border-radius: 999px;
   background: rgb(var(--c-white));
   border: 1px solid rgb(var(--c-cream-300));
@@ -306,16 +314,77 @@ input[type="checkbox"].sr-only:checked ~ div {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.pin__emoji {
-  font-size: 13px;
+.pin__thumb {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(var(--c-cream-100));
+  display: grid;
+  place-items: center;
+  font-size: 14px;
   line-height: 1;
 }
 
-.pin__time {
-  font-size: 11px;
+/*
+ * The !important is load-bearing. Leaflet's own stylesheet sets
+ * `width: auto` on every `img` inside the marker pane (it needs that for its
+ * default sprite pins), which beats a plain `width: 100%` here — the photo
+ * then renders at its natural 1600px and the 28px window shows the top-left
+ * corner of it, which reads as a patch of flat colour rather than a dish.
+ */
+.pin__thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  /* Food photos are framed on the plate, so the middle is the subject */
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.pin__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pin__name {
+  /* Long names are cut rather than allowed to push the pin across half the
+     screen — the card below has the full one. */
+  max-width: 104px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11.5px;
   font-weight: 600;
-  color: rgb(var(--c-warm-700));
+  line-height: 1.15;
+  color: rgb(var(--c-warm-800));
   letter-spacing: -0.01em;
+}
+
+/* Rating and drive time share a line: two short facts read as one thought */
+.pin__facts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1.1;
+  color: rgb(var(--c-warm-500));
+}
+
+.pin__rating {
+  color: rgb(var(--c-sand-600));
+  font-weight: 600;
+}
+
+.pin__time {
+  font-weight: 600;
+  color: rgb(var(--c-warm-600));
+}
+
+.pin__sep {
+  color: rgb(var(--c-warm-300));
 }
 
 /* The little stem that points at the actual coordinate */
@@ -332,16 +401,45 @@ input[type="checkbox"].sr-only:checked ~ div {
   transform: rotate(45deg);
 }
 
+/*
+ * Collapsed. Applied by the declutter pass in MapPage to any pin whose label
+ * would land on top of one already placed: the photo alone still says which
+ * place it is, and an unreadable pile of overlapping names says nothing.
+ * The class is toggled directly on the element rather than through React, so
+ * panning and zooming don't rebuild every marker.
+ */
+.pin--mini {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.pin--mini .pin__text {
+  display: none;
+}
+
+.pin--mini .pin__thumb {
+  width: 26px;
+  height: 26px;
+}
+
 .pin--selected {
   background: rgb(var(--c-sand-500));
   border-color: rgb(var(--c-sand-500));
-  transform: translateX(-50%) scale(1.12);
+  transform: translateX(-50%) scale(1.08);
   box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.32);
   z-index: 1000;
 }
 
-.pin--selected .pin__time {
+.pin--selected .pin__name,
+.pin--selected .pin__time,
+.pin--selected .pin__rating,
+.pin--selected .pin__facts {
   color: #ffffff;
+}
+
+.pin--selected .pin__sep {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .pin--selected .pin__tail {
@@ -351,7 +449,7 @@ input[type="checkbox"].sr-only:checked ~ div {
 
 /* Places already ticked off recede, so the map reads as "where to next" */
 .pin--done:not(.pin--selected) {
-  opacity: 0.62;
+  opacity: 0.6;
 }
 
 /* "You are here" */

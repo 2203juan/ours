@@ -12,7 +12,7 @@ import { hasCoords, isLocatable, type LocatedPlan, type Plan, type PlanStatus } 
 import { cn } from '../lib/utils'
 import { Sheet } from '../components/ui/Sheet'
 import { MapCanvas } from '../components/map/MapCanvas'
-import { myLocationPin, planPin } from '../components/map/pins'
+import { MINI_WIDTH, PIN_HEIGHT, myLocationPin, planPin } from '../components/map/pins'
 import { PlaceCard, UnlocatedRow } from '../components/map/PlaceCard'
 import { LocationPicker } from '../components/map/LocationPicker'
 
@@ -58,6 +58,10 @@ export function MapPage() {
   const markersRef = useRef(new Map<string, L.Marker>())
   const meMarkerRef = useRef<L.Marker | null>(null)
   const railRef = useRef<HTMLDivElement>(null)
+  /** Read by the declutter pass, which runs outside React on map events. */
+  const visibleRef = useRef<LocatedPlan[]>([])
+  const tripsRef = useRef<TripMap>({})
+  const selectedRef = useRef<string | null>(null)
   /** True while the map is moving because a card was tapped, not the user. */
   const programmaticPan = useRef(false)
   const fittedRef = useRef(false)
@@ -166,6 +170,9 @@ export function MapPage() {
     for (const plan of visible) {
       const icon = planPin({
         emoji: plan.category?.emoji ?? '📍',
+        name: plan.name,
+        photo: plan.images[0] ?? null,
+        rating: plan.maps_rating,
         label: tripLabel(trips[plan.id]),
         selected: plan.id === selectedId,
         done: plan.status === 'done',
@@ -183,6 +190,15 @@ export function MapPage() {
 
       markersRef.current.set(plan.id, marker)
     }
+
+    visibleRef.current = visible
+    tripsRef.current = trips
+    selectedRef.current = selectedId
+
+    // After the browser has laid the new icons out — measuring before that
+    // reads stale widths and collapses pins that would have fit.
+    const frame = requestAnimationFrame(declutter)
+    return () => cancelAnimationFrame(frame)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, trips, selectedId])
 
@@ -199,6 +215,80 @@ export function MapPage() {
     // Room for the header chips on top and the card rail along the bottom
     map.fitBounds(bounds, { padding: [50, 50], paddingBottomRight: [50, 190], maxZoom: 15 })
   }, [visible, me.point])
+
+
+  // ── Keeping the labels readable ────────────────────────────────────────────
+
+  /*
+   * Pins carry a photo and a name, which is what makes the map useful and
+   * also what makes it illegible the moment two places sit on the same
+   * block — and they often do, because a geocoded address lands on the
+   * street centroid rather than the door.
+   *
+   * So on every zoom, the closest and most relevant pins claim their space
+   * first and anything that would land on top of one already placed
+   * collapses to just its photo. Straight DOM class toggling, no React: this
+   * runs on map events, and re-rendering a dozen markers per zoom step would
+   * stutter on a phone.
+   */
+  const declutter = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    const candidates = visibleRef.current
+      .map((plan) => {
+        const element = markersRef.current.get(plan.id)?.getElement()
+          ?.firstElementChild as HTMLElement | undefined
+        return element ? { plan, element } : null
+      })
+      .filter((entry): entry is { plan: LocatedPlan; element: HTMLElement } => entry !== null)
+
+    // Measure at full width first — a pin already collapsed would otherwise
+    // report the collapsed size and never expand again.
+    for (const { element } of candidates) element.classList.remove('pin--mini')
+    const measured = candidates.map((entry) => ({ ...entry, width: entry.element.offsetWidth }))
+
+    // What you'd look at first gets to keep its label: whatever is selected,
+    // then whatever is closest.
+    const byPriority = [...measured].sort((a, b) => {
+      if (a.plan.id === selectedRef.current) return -1
+      if (b.plan.id === selectedRef.current) return 1
+      const ta = tripsRef.current[a.plan.id]
+      const tb = tripsRef.current[b.plan.id]
+      return (ta?.seconds ?? ta?.km ?? Infinity) - (tb?.seconds ?? tb?.km ?? Infinity)
+    })
+
+    const placed: Array<[number, number, number, number]> = []
+
+    for (const { plan, element, width } of byPriority) {
+      const point = map.latLngToContainerPoint([plan.lat, plan.lng])
+      const full = boxAt(point.x, point.y, width)
+
+      if (!overlapsAny(full, placed)) {
+        placed.push(full)
+        continue
+      }
+
+      element.classList.add('pin--mini')
+      // Collapsed pins may still touch each other. That's deliberate: two
+      // overlapping photos are readable, and hiding pins outright would lose
+      // places from the map entirely.
+      placed.push(boxAt(point.x, point.y, MINI_WIDTH))
+    }
+  }, [])
+
+  // Re-run whenever the map moves under the pins, or the pins change
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    map.on('zoomend', declutter)
+    map.on('moveend', declutter)
+    return () => {
+      map.off('zoomend', declutter)
+      map.off('moveend', declutter)
+    }
+  }, [declutter, visible])
 
   // ── Selection ──────────────────────────────────────────────────────────────
 
@@ -377,6 +467,26 @@ export function MapPage() {
         onClose={() => setPinningPlan(null)}
       />
     </div>
+  )
+}
+
+/**
+ * A pin's screen box. The tail sits on the coordinate and the pill is centred
+ * above it, so the box hangs up and to both sides of the point. The extra
+ * couple of pixels keep neighbours from touching.
+ */
+function boxAt(x: number, y: number, width: number): [number, number, number, number] {
+  const gap = 3
+  return [x - width / 2 - gap, y - PIN_HEIGHT - gap, x + width / 2 + gap, y + gap]
+}
+
+function overlapsAny(
+  box: [number, number, number, number],
+  placed: Array<[number, number, number, number]>
+): boolean {
+  return placed.some(
+    ([left, top, right, bottom]) =>
+      box[0] < right && box[2] > left && box[1] < bottom && box[3] > top
   )
 }
 
